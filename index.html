@@ -1,0 +1,600 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Operation Dashboard PT2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: slim control bar, then either the PowerPoint-style board (photo card + system pills) or the technician entry sheet */
+:root{
+  --bg:#f3f6f7; --panel:#ffffff; --fg:#14262c; --muted:#5b6f76; --line:#d6e0e3;
+  --accent:#0f7c9c; --accent-ink:#ffffff;
+  --ok:#5fb832; --ok-soft:#e3f4d8; --ok-ink:#1f4d0c;
+  --bad:#e1261c; --bad-soft:#fde3e1; --bad-ink:#7a110b;
+  --idle:#c9d3d6; --idle-soft:#eef2f3; --idle-ink:#41545a;
+  --head:#ffe600; --head-ink:#1d1d00;
+  --shadow:0 10px 30px rgba(20,38,44,.10);
+  --f-body:"IBM Plex Sans Thai",system-ui,"Leelawadee UI",Tahoma,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0e1719; --panel:#162326; --fg:#e4eef0; --muted:#94a9af; --line:#2a3b3f;
+  --accent:#3fb3d3; --accent-ink:#04212a;
+  --ok:#62c235; --ok-soft:#1d3415; --ok-ink:#c7f0b0;
+  --bad:#f0473d; --bad-soft:#3d1513; --bad-ink:#ffc9c4;
+  --idle:#3c4e53; --idle-soft:#1c2a2d; --idle-ink:#b4c4c8;
+  --head:#d9c400; --head-ink:#1d1d00; --shadow:0 10px 30px rgba(0,0,0,.4); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1719; --panel:#162326; --fg:#e4eef0; --muted:#94a9af; --line:#2a3b3f;
+  --accent:#3fb3d3; --accent-ink:#04212a;
+  --ok:#62c235; --ok-soft:#1d3415; --ok-ink:#c7f0b0;
+  --bad:#f0473d; --bad-soft:#3d1513; --bad-ink:#ffc9c4;
+  --idle:#3c4e53; --idle-soft:#1c2a2d; --idle-ink:#b4c4c8;
+  --head:#d9c400; --head-ink:#1d1d00; --shadow:0 10px 30px rgba(0,0,0,.4); color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:1280px;margin:0 auto;padding-inline:16px;padding-block:12px 96px}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+
+/* top bar */
+.bar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;padding-block:6px 14px;border-bottom:1px solid var(--line);margin-bottom:18px}
+.brand{display:flex;flex-direction:column;min-width:0}
+.brand b{font-size:1.15rem;letter-spacing:.01em}
+.brand span{color:var(--muted);font-size:.85rem}
+.tabs{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px}
+.tabs button{border:0;background:none;padding:7px 16px;border-radius:999px;font-weight:600;color:var(--muted)}
+.tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
+.datebox{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.datebox label{font-size:.85rem;color:var(--muted)}
+.datebox input,.datebox select{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:6px 10px}
+.live{display:inline-flex;align-items:center;gap:6px;font-size:.8rem;color:var(--muted)}
+.live i{width:8px;height:8px;border-radius:50%;background:var(--idle)}
+.live.on i{background:var(--ok);box-shadow:0 0 0 3px var(--ok-soft)}
+
+/* board (slide 1) */
+.board{display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:22px;align-items:start}
+.hero{position:relative;background:#ffffff;box-shadow:var(--shadow);border-radius:4px;padding:18px 18px 16px;min-width:0}
+.hero::before,.hero::after{content:"";position:absolute;top:22%;width:14px;height:48%;background:var(--accent)}
+.hero::before{left:-22px}.hero::after{right:-22px}
+.hero img{display:block;width:100%;aspect-ratio:698/533;object-fit:cover}
+.hero h1{margin:12px 0 0;text-align:center;font-size:clamp(1.3rem,2.6vw,1.9rem);color:var(--accent);text-wrap:balance}
+.hero p{margin:0;text-align:center;color:var(--muted)}
+.syslist{display:flex;flex-direction:column;gap:12px}
+.pill{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px;width:100%;text-align:left;border:2px solid rgba(0,0,0,.55);border-radius:12px;padding:10px 12px;font-weight:700;line-height:1.3;transition:transform .15s}
+.pill:hover{transform:translateX(-3px)}
+.pill small{display:block;font-weight:500;font-size:.78rem;opacity:.85}
+.pill .cnt{font-family:var(--f-mono);font-size:.85rem;font-weight:500;white-space:nowrap}
+.st-ok{background:var(--ok);color:#10300a}
+.st-bad{background:var(--bad);color:#fff}
+.st-idle{background:var(--idle);color:var(--idle-ink)}
+
+/* kpis + summary (slide 2) */
+.below{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:22px;margin-top:26px;align-items:start}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.card h2{margin:0 0 10px;font-size:1.05rem}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px}
+.kpi{border-radius:8px;padding:10px 12px;background:var(--idle-soft)}
+.kpi b{display:block;font-family:var(--f-mono);font-size:1.6rem;line-height:1.1}
+.kpi span{font-size:.8rem;color:var(--muted)}
+.kpi.ok{background:var(--ok-soft)}.kpi.ok b{color:var(--ok-ink)}
+.kpi.bad{background:var(--bad-soft)}.kpi.bad b{color:var(--bad-ink)}
+.gauge{height:10px;border-radius:5px;background:var(--idle-soft);overflow:hidden;display:flex;margin-top:14px}
+.gauge i{display:block;height:100%}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.8rem;color:var(--muted);margin-top:6px}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px;background:var(--c)}
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:9px 16px;font-weight:600}
+.btn.yellow{background:var(--head);color:var(--head-ink);border-color:transparent}
+.btn.green{background:var(--ok);color:#10300a;border-color:transparent}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.btn:disabled{opacity:.5;cursor:default}
+
+/* sheet tables (slides 4–10) */
+.tscroll{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th{background:var(--head);color:var(--head-ink);font-weight:700;text-align:left;padding:6px 8px;white-space:nowrap;position:sticky;top:0}
+td{border-top:1px solid var(--line);padding:5px 8px;vertical-align:middle}
+td.c,th.c{text-align:center}
+td.stat{width:84px;text-align:center;font-weight:700;font-size:.8rem}
+td.stat.ok{background:var(--ok);color:#10300a}
+td.stat.bad{background:var(--bad);color:#fff}
+td.stat.idle{background:var(--idle-soft);color:var(--muted);font-weight:500}
+tr.badrow td:not(.stat){background:var(--bad-soft)}
+tfoot td{font-weight:700;border-top:2px solid var(--fg)}
+.sum a{color:var(--accent);text-decoration:underline;cursor:pointer}
+.detail-head{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:14px}
+.detail-head .pill{width:auto;max-width:320px;cursor:default}
+.detail-head .pill:hover{transform:none}
+.note{color:var(--muted);font-size:.85rem;margin-top:10px}
+.by{color:var(--muted);font-size:.75rem}
+
+/* entry form */
+.formtop{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin-bottom:14px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:.8rem;color:var(--muted)}
+.field input{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:8px 10px;min-width:0}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:12px}
+.chip{flex:none;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:6px 12px;font-size:.85rem;font-weight:600;display:flex;gap:6px;align-items:center}
+.chip[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);color:var(--accent)}
+.chip i{width:9px;height:9px;border-radius:50%;background:var(--c)}
+.rows{display:flex;flex-direction:column;gap:8px}
+.row{display:grid;grid-template-columns:minmax(0,1fr) auto 92px;gap:12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-left:6px solid var(--idle);border-radius:8px;padding:10px 12px}
+.row.ok{border-left-color:var(--ok)}
+.row.bad{border-left-color:var(--bad);background:var(--bad-soft)}
+.row.dirty{box-shadow:0 0 0 2px var(--head) inset}
+.row .nm{font-weight:700}
+.row .dt{font-size:.82rem;color:var(--muted)}
+.row .ct{font-size:.78rem;color:var(--muted)}
+.row .ct b{font-family:var(--f-mono);color:var(--fg)}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:var(--panel);padding:8px 14px;font-weight:700;min-width:52px}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"].g{background:var(--ok);color:#10300a}
+.seg button[aria-pressed="true"].r{background:var(--bad);color:#fff}
+.numin{display:flex;align-items:center;gap:6px}
+.numin input{width:96px;border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:8px 10px;font-family:var(--f-mono);text-align:right}
+.numin span{color:var(--muted);font-size:.85rem}
+.badge{justify-self:end;text-align:center;font-weight:700;font-size:.8rem;border-radius:6px;padding:6px 0;width:92px}
+.badge.ok{background:var(--ok);color:#10300a}.badge.bad{background:var(--bad);color:#fff}.badge.idle{background:var(--idle-soft);color:var(--muted);font-weight:500}
+.savebar{position:fixed;left:0;right:0;bottom:0;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));background:var(--panel);border-top:1px solid var(--line);display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap;box-shadow:0 -6px 20px rgba(0,0,0,.08);z-index:5}
+.savebar .msg{color:var(--muted);font-size:.9rem}
+.toast{position:fixed;left:50%;top:16px;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:8px 16px;border-radius:8px;z-index:10;font-weight:600}
+.banner{background:var(--idle-soft);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:.9rem}
+.banner.warn{background:var(--bad-soft);color:var(--bad-ink)}
+
+@media (max-width:820px){
+  .board,.below{grid-template-columns:minmax(0,1fr)}
+  .hero::before,.hero::after{display:none}
+  .syslist{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+}
+@media (max-width:560px){
+  .row{grid-template-columns:minmax(0,1fr) 92px}
+  .row .inp{grid-column:1/-1;grid-row:2}
+}
+@media (prefers-reduced-motion:reduce){.pill{transition:none}}
+/* Printed report: only #report is printed; colors kept so ปกติ/ผิดปกติ stay readable on paper */
+#report{font-family:var(--f-body);color:#111;background:#fff}
+#report h1{font-size:20px;margin:0 0 2px}
+#report .rp-sub{color:#555;margin:0 0 12px;font-size:13px}
+#report h2{font-size:15px;margin:16px 0 6px;break-after:avoid}
+#report table{width:100%;border-collapse:collapse;font-size:11.5px}
+#report th,#report td{border:1px solid #bbb;padding:4px 6px;text-align:left;vertical-align:top}
+#report th{background:#ffe600}
+#report td.c,#report th.c{text-align:center}
+#report tr{break-inside:avoid}
+#report .ok{background:#92D050}
+#report .bad{background:#FF0000;color:#fff}
+#report .idle{background:#eee;color:#555}
+#report .rp-kpis{display:flex;gap:10px;margin:8px 0}
+#report .rp-kpis div{border:1px solid #bbb;border-radius:6px;padding:6px 12px;font-size:12px}
+#report .rp-kpis b{display:block;font-size:18px}
+#report .rp-sign{display:flex;justify-content:space-between;gap:40px;margin-top:36px;font-size:12px;break-inside:avoid}
+#report .rp-sign div{flex:1;text-align:center;border-top:1px dotted #555;padding-top:6px}
+@media print{
+  @page{size:A4;margin:12mm}
+  html,body{background:#fff !important}
+  body > *:not(#report){display:none !important}
+  #report{display:block !important}
+  #report *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+
+</style>
+
+<div class="wrap">
+  <header class="bar">
+    <div class="brand"><b>Operation Dashboard</b><span><span id="brand-name"></span> · ตรวจสอบระบบประจำวัน</span></div>
+    <div class="tabs" role="tablist">
+      <button id="tab-dash" role="tab" aria-selected="true" data-mode="dashboard">แดชบอร์ด</button>
+      <button id="tab-form" role="tab" aria-selected="false" data-mode="form">กรอกค่าตรวจสอบ</button>
+    </div>
+    <div class="datebox">
+      <label for="date">วันที่ตรวจ</label>
+      <input type="date" id="date">
+      <select id="history" aria-label="วันที่มีข้อมูล"><option value="">วันที่มีข้อมูล…</option></select>
+      <span class="live" id="live"><i></i><span>กำลังเชื่อมต่อ</span></span>
+    </div>
+  </header>
+
+  <div id="banner" class="banner" hidden></div>
+
+  <!-- DASHBOARD -->
+  <section id="view-dashboard">
+    <div id="dash-home">
+      <div class="board">
+        <figure class="hero" style="margin:0">
+          <img id="proj-photo" alt="" hidden>
+          <h1 id="proj-name"></h1>
+          <p id="proj-sub"></p>
+        </figure>
+        <nav class="syslist" id="syslist" aria-label="ระบบ"></nav>
+      </div>
+      <div class="below">
+        <div class="card">
+          <h2>สรุปผลการตรวจสอบระบบ <span class="by" id="sum-date"></span></h2>
+          <div class="tscroll"><table class="sum" id="sumtable"></table></div>
+          <div class="actions">
+            <button class="btn yellow" id="open-sheet">Data Sheet</button>
+            <button class="btn" id="export">ดาวน์โหลด Excel (มีสีสถานะ)</button>
+            <button class="btn" id="print-report">พิมพ์รายงาน / PDF</button>
+          </div>
+        </div>
+        <div class="card">
+          <h2>ภาพรวมวันนี้</h2>
+          <div class="kpis" id="kpis"></div>
+          <div class="gauge" id="gauge"></div>
+          <div class="legend"><span style="--c:var(--ok)">ปกติ</span><span style="--c:var(--bad)">ผิดปกติ</span><span style="--c:var(--idle)">ยังไม่ตรวจ</span></div>
+          <h2 style="margin-top:18px">รายการผิดปกติ</h2>
+          <div id="badlist"></div>
+        </div>
+      </div>
+    </div>
+    <div id="dash-detail" hidden>
+      <div class="detail-head">
+        <div id="detail-pill"></div>
+        <button class="btn green" id="back">กลับ</button>
+      </div>
+      <div class="tscroll"><table id="detail-table"></table></div>
+      <p class="note" id="detail-note"></p>
+    </div>
+  </section>
+
+  <!-- FORM -->
+  <section id="view-form" hidden>
+    <div class="formtop">
+      <div class="field"><label for="tech">ชื่อผู้ตรวจ</label><input id="tech" placeholder="เช่น สมชาย ใจดี" autocomplete="name"></div>
+      <button class="btn" id="fill-normal">ใส่ค่าปกติให้ช่องที่ยังว่าง (N / A)</button>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="rows" id="rows"></div>
+  </section>
+</div>
+
+<div class="savebar" id="savebar" hidden>
+  <span class="msg" id="savemsg"></span>
+  <button class="btn" id="discard">ยกเลิก</button>
+  <button class="btn primary" id="save">บันทึก</button>
+</div>
+<div class="toast" id="toast" hidden></div>
+<div id="report" hidden></div>
+
+<script>
+// Talks to the Apps Script JSON API without Google cookies, so phones signed in to several Google accounts still work.
+const PROJECT = (new URLSearchParams(location.search).get("p") || "pt1").toLowerCase();
+const API_URL = "https://script.google.com/macros/s/AKfycbyWGb4sbTMkBrBe7TKTmBSeVSEPuqXODlz6QcVOVh4eHnAl3jx8G4G7EiHtdBZYHqor/exec";
+function callApi_(req, ok, fail){
+  fetch(req.url, Object.assign({ credentials: "omit", redirect: "follow" }, req.init || {}))
+    .then(r => r.json())
+    .then(d => d && d.error ? fail(new Error(d.error)) : ok(d))
+    .catch(err => fail(err));
+}
+window.google = { script: { get run(){
+  let ok = () => {}, fail = () => {};
+  const r = {
+    withSuccessHandler(f){ ok = f; return r; },
+    withFailureHandler(f){ fail = f; return r; },
+    getData(date){ callApi_({ url: API_URL + "?api=getData&p=" + encodeURIComponent(PROJECT) + "&date=" + encodeURIComponent(date || "") }, ok, fail); },
+    saveValues(date, name, changes){ callApi_({ url: API_URL, init: { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ fn: "saveValues", p: PROJECT, args: [date, name, changes] }) } }, ok, fail); }
+  };
+  return r;
+} } };
+</script>
+<script>
+let ITEMS = [];
+const MODE = new URLSearchParams(location.search).get("page") === "form" ? "form" : "dashboard";
+const SYSTEMS = [
+  {key:"ระบบไฟฟ้าและสำรองไฟ", label:"ระบบไฟฟ้า/สำรองไฟ"},
+  {key:"ระบบสำรองน้ำอาคาร", label:"ระบบสำรองน้ำอาคาร"},
+  {key:"Special room", label:"Special room"},
+  {key:"ระบบปรับอากาศและระบายอากาศ", label:"ระบบปรับอากาศและระบายอากาศ"},
+  {key:"ลิฟต์และบันไดเลื่อน", label:"ลิฟต์และบันไดเลื่อน"},
+  {key:"ระบบป้องกันอัคคีภัย", label:"ระบบป้องกันอัคคีภัย"},
+  {key:"ระบบสุขาภิบาลและบำบัดน้ำเสีย", label:"ระบบสุขาภิบาลและบำบัดน้ำเสีย"},
+  {key:"ระบบงานอาคารหรืองานโยธา", label:"ระบบงานอาคารหรืองานโยธา"}
+];
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+// input kind per control value (mirrors the sheet's เกณฑ์)
+function kindOf(it){
+  if (it.sys === "Special room") return "NAN";
+  if (it.ctrl === "A/BP") return "ABP";
+  if (/^>\s*[\d.]+\s*%/.test(it.ctrl)) return "PCT";
+  if (/^>\s*[\d.]+/.test(it.ctrl)) return "NUM";
+  if (/^[\d.]+\s*-\s*[\d.]+$/.test(it.ctrl)) return "NUM";
+  return "NAN";
+}
+
+// Same logic as column F formula in OP_PT2: true = ปกติ, false = ผิดปกติ, null = ยังไม่ตรวจ
+function evaluate(ctrl, v){
+  if (v === null || v === undefined || v === "") return null;
+  if (typeof v === "number"){
+    if (ctrl.includes(">")){
+      let th = parseFloat(ctrl.replace(/[>%\s]/g,""));
+      if (ctrl.includes("%")) th /= 100;
+      return v > th;
+    }
+    const m = ctrl.match(/^\s*([\d.]+)\s*-\s*([\d.]+)/);
+    if (m) return v >= +m[1] && v <= +m[2];
+    return false;
+  }
+  return v === "A" || v === "N";
+}
+const fmt = (it, v) => v === undefined || v === null || v === "" ? "" : (it.kind === "PCT" && typeof v === "number" ? Math.round(v*1000)/10 + "%" : String(v));
+
+// ---------- state ----------
+const bkk = () => new Date(Date.now() + 7*3600e3).toISOString().slice(0,10);
+let state = { date: bkk(), values: {}, mode: "dashboard", sys: null, formSys: SYSTEMS[0].key, pending: {}, days: [], canWrite: true, db: null };
+
+function valueOf(id){ return id in state.pending ? state.pending[id] : state.values[id]?.v; }
+function statusOf(it, usePending){ return evaluate(it.ctrl, usePending ? valueOf(it.id) : state.values[it.id]?.v); }
+function sysStats(key, usePending){
+  const list = ITEMS.filter(i => i.sys === key);
+  let ok=0,bad=0,idle=0;
+  list.forEach(i => { const s = statusOf(i, usePending); s===true?ok++:s===false?bad++:idle++; });
+  return {list,total:list.length,ok,bad,idle};
+}
+const stClass = st => !st.total || st.idle === st.total ? "idle" : st.bad ? "bad" : "ok";
+
+// ---------- dashboard ----------
+function renderDashboard(){
+  const thai = new Date(state.date+"T00:00:00").toLocaleDateString("th-TH",{day:"numeric",month:"long",year:"numeric"});
+  $("sum-date").textContent = "· " + thai;
+  // pills
+  $("syslist").innerHTML = SYSTEMS.map((s,i) => {
+    const st = sysStats(s.key);
+    const c = stClass(st);
+    const sub = !st.total ? "ยังไม่มีรายการ" : st.idle===st.total ? "ยังไม่ตรวจ" : st.bad ? `ผิดปกติ ${st.bad} รายการ` : st.idle ? `ตรวจแล้ว ${st.ok}/${st.total}` : "ปกติทั้งหมด";
+    return `<button class="pill st-${c}" data-sys="${i}"><span>${esc(s.label)}<small>${sub}</small></span><span class="cnt">${st.total? (st.ok+st.bad)+"/"+st.total : ""}</span></button>`;
+  }).join("");
+  // summary table
+  let T={total:0,ok:0,bad:0,idle:0};
+  const rows = SYSTEMS.filter(s => ITEMS.some(i=>i.sys===s.key)).map(s => {
+    const st = sysStats(s.key); T.total+=st.total;T.ok+=st.ok;T.bad+=st.bad;T.idle+=st.idle;
+    const pct = st.ok+st.bad ? (st.ok/(st.total)*100).toFixed(1)+"%" : "–";
+    return `<tr><td><a data-sys="${SYSTEMS.indexOf(s)}">${esc(s.key)}</a></td><td class="c num">${st.total}</td><td class="c num">${st.ok}</td><td class="c num" style="${st.bad?'background:var(--bad-soft);color:var(--bad-ink)':''}">${st.bad}</td><td class="c num">${pct}</td></tr>`;
+  }).join("");
+  $("sumtable").innerHTML = `<thead><tr><th>ระบบ</th><th class="c">จำนวนทั้งหมด</th><th class="c">ปกติ</th><th class="c">ผิดปกติ</th><th class="c">% ปกติ</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><td>รวมทั้งหมด</td><td class="c num">${T.total}</td><td class="c num">${T.ok}</td><td class="c num">${T.bad}</td><td class="c num">${T.ok+T.bad?(T.ok/T.total*100).toFixed(1)+"%":"–"}</td></tr></tfoot>`;
+  $("kpis").innerHTML = `<div class="kpi"><b>${T.total}</b><span>รายการทั้งหมด</span></div><div class="kpi ok"><b>${T.ok}</b><span>ปกติ</span></div><div class="kpi bad"><b>${T.bad}</b><span>ผิดปกติ</span></div><div class="kpi"><b>${T.idle}</b><span>ยังไม่ตรวจ</span></div>`;
+  const w = n => (n/(T.total||1)*100)+"%";
+  $("gauge").innerHTML = `<i style="width:${w(T.ok)};background:var(--ok)"></i><i style="width:${w(T.bad)};background:var(--bad)"></i>`;
+  const bads = ITEMS.filter(i => statusOf(i) === false);
+  $("badlist").innerHTML = bads.length ? `<div class="tscroll"><table><thead><tr><th>ชื่อ</th><th>ค่าควบคุม</th><th class="c">ค่าที่ตรวจ</th></tr></thead><tbody>${bads.map(i=>`<tr class="badrow"><td>${esc(i.name)}<div class="by">${esc(i.sys)}</div></td><td class="num">${esc(i.ctrl)}</td><td class="c num">${esc(fmt(i,state.values[i.id]?.v))}</td></tr>`).join("")}</tbody></table></div>` : `<p class="note">${T.ok? "ไม่มีรายการผิดปกติ" : "ยังไม่มีการบันทึกค่าในวันนี้ ให้ช่างกรอกค่าที่ลิงก์ “กรอกค่าตรวจสอบ”"}</p>`;
+  if (state.sys !== null) renderDetail();
+}
+function renderDetail(){
+  const all = state.sys === "all";
+  const s = all ? {key:null,label:"Data Sheet ทุกระบบ"} : SYSTEMS[state.sys];
+  const list = all ? ITEMS : ITEMS.filter(i => i.sys === s.key);
+  const st = all ? {total:1,idle:0,bad:ITEMS.some(i=>statusOf(i)===false)} : sysStats(s.key);
+  $("detail-pill").innerHTML = `<span class="pill ${all?'btn yellow':'st-'+stClass(st)}">${esc(s.label)}</span>`;
+  $("detail-table").innerHTML = `<thead><tr><th class="c">ลำดับ</th><th>ระบบ</th><th>ชื่อ</th><th>รายละเอียด</th><th class="c">ค่าควบคุม</th><th class="c">ค่าที่ตรวจสอบ</th><th class="c">สถานะ</th></tr></thead><tbody>${
+    list.length ? list.map((i,n) => { const r = state.values[i.id]; const v = statusOf(i);
+      return `<tr><td class="c num">${n+1}</td><td>${esc(i.sys)}</td><td>${esc(i.name)}</td><td>${esc(i.detail)}${r?.by?`<div class="by">${esc(r.by)} · ${new Date(r.at).toLocaleTimeString("th-TH",{hour:"2-digit",minute:"2-digit"})}</div>`:""}</td><td class="c num">${esc(i.ctrl)}</td><td class="c num">${esc(fmt(i,r?.v))}</td><td class="stat ${v===true?'ok':v===false?'bad':'idle'}">${v===true?'ปกติ':v===false?'ผิดปกติ':'ยังไม่ตรวจ'}</td></tr>`;}).join("")
+    : `<tr><td colspan="7" class="note" style="padding:16px">ยังไม่มีรายการตรวจสอบของระบบนี้ในชีท</td></tr>`}</tbody>`;
+  $("detail-note").textContent = s.key === "ระบบปรับอากาศและระบายอากาศ" && PROJ.note ? "อุปกรณ์อื่นในระบบ: " + PROJ.note + " (ยังไม่มีเกณฑ์ในชีท)" : "";
+}
+function openDetail(i){ state.sys = i; $("dash-home").hidden = true; $("dash-detail").hidden = false; renderDetail(); window.scrollTo(0,0); }
+$("syslist").addEventListener("click", e => { const b = e.target.closest("[data-sys]"); if (b) openDetail(+b.dataset.sys); });
+$("sumtable").addEventListener("click", e => { const b = e.target.closest("[data-sys]"); if (b) openDetail(+b.dataset.sys); });
+$("open-sheet").onclick = () => openDetail("all");
+$("back").onclick = () => { state.sys = null; $("dash-home").hidden = false; $("dash-detail").hidden = true; };
+
+// ---------- form ----------
+function renderChips(){
+  $("chips").innerHTML = SYSTEMS.filter(s => ITEMS.some(i=>i.sys===s.key)).map(s => {
+    const st = sysStats(s.key, true); const c = stClass(st);
+    return `<button class="chip" aria-pressed="${s.key===state.formSys}" data-key="${esc(s.key)}" style="--c:var(--${c==='ok'?'ok':c==='bad'?'bad':'idle'})"><i></i>${esc(s.label)} <span class="num" style="font-weight:500">${st.ok+st.bad}/${st.total}</span></button>`;
+  }).join("");
+}
+function inputHtml(it){
+  const v = valueOf(it.id);
+  if (it.kind === "NAN" || it.kind === "ABP"){
+    const [g,r] = it.kind === "NAN" ? ["N","AN"] : ["A","BP"];
+    return `<div class="seg" role="group" aria-label="${esc(it.name)}"><button class="g" data-id="${it.id}" data-v="${g}" aria-pressed="${v===g}">${g}</button><button class="r" data-id="${it.id}" data-v="${r}" aria-pressed="${v===r}">${r}</button></div>`;
+  }
+  const shown = v === undefined || v === null || v === "" ? "" : it.kind === "PCT" ? Math.round(v*1000)/10 : v;
+  return `<div class="numin"><input id="in-${it.id}" inputmode="decimal" data-id="${it.id}" value="${shown}" placeholder="${it.kind==='PCT'?'เช่น 95':'ค่า'}" aria-label="${esc(it.name)}"><span>${it.kind==='PCT'?'%':''}</span></div>`;
+}
+function rowClass(it){ const s = statusOf(it,true); return (s===true?"ok":s===false?"bad":"") + (it.id in state.pending ? " dirty":""); }
+function badgeHtml(it){ const s = statusOf(it,true); return `<span class="badge ${s===true?'ok':s===false?'bad':'idle'}">${s===true?'ปกติ':s===false?'ผิดปกติ':'ยังไม่ตรวจ'}</span>`; }
+function renderForm(){
+  renderChips();
+  const list = ITEMS.filter(i => i.sys === state.formSys);
+  $("rows").innerHTML = list.map(it => `<div class="row ${rowClass(it)}" id="row-${it.id}">
+    <div><div class="nm">${esc(it.name)}</div>${it.detail!==it.name?`<div class="dt">${esc(it.detail)}</div>`:""}<div class="ct">ค่าควบคุม <b>${esc(it.ctrl)}</b>${state.values[it.id]?.by?` · ล่าสุดโดย ${esc(state.values[it.id].by)}`:""}</div></div>
+    <div class="inp">${inputHtml(it)}</div>${badgeHtml(it)}</div>`).join("");
+  renderSavebar();
+}
+function refreshRow(id){
+  const it = ITEMS.find(i=>i.id===id), el = $("row-"+id); if (!el) return;
+  el.className = "row " + rowClass(it);
+  el.querySelector(".badge").outerHTML = badgeHtml(it);
+  el.querySelectorAll(".seg button").forEach(b => b.setAttribute("aria-pressed", String(valueOf(id) === b.dataset.v)));
+  renderChips(); renderSavebar();
+}
+function setPending(id, v){
+  const saved = state.values[id]?.v;
+  if (v === saved || (v === "" && saved === undefined)) delete state.pending[id]; else state.pending[id] = v;
+  refreshRow(id);
+}
+$("rows").addEventListener("click", e => {
+  const b = e.target.closest(".seg button"); if (!b) return;
+  const id = b.dataset.id; setPending(id, valueOf(id) === b.dataset.v ? "" : b.dataset.v);
+});
+$("rows").addEventListener("input", e => {
+  const inp = e.target.closest("input[data-id]"); if (!inp) return;
+  const it = ITEMS.find(i=>i.id===inp.dataset.id);
+  const t = inp.value.trim().replace(",",".");
+  let v = t === "" ? "" : Number(t);
+  if (t !== "" && isNaN(v)) return;
+  if (v !== "" && it.kind === "PCT") v = Math.round(v*10)/1000;
+  setPending(it.id, v);
+});
+$("chips").addEventListener("click", e => { const b = e.target.closest(".chip"); if (b){ state.formSys = b.dataset.key; renderForm(); } });
+$("fill-normal").onclick = () => {
+  ITEMS.filter(i => i.sys === state.formSys && (i.kind==="NAN"||i.kind==="ABP")).forEach(i => {
+    const v = valueOf(i.id); if (v === undefined || v === "") state.pending[i.id] = i.kind==="NAN"?"N":"A";
+  });
+  renderForm();
+};
+function renderSavebar(){
+  const n = Object.keys(state.pending).length;
+  $("savebar").hidden = state.mode !== "form" || n === 0;
+  $("savemsg").textContent = `มี ${n} รายการที่ยังไม่บันทึก · วันที่ ${state.date}`;
+}
+$("discard").onclick = () => { state.pending = {}; renderForm(); };
+let tech = ""; try { tech = localStorage.getItem("op-tech") || ""; } catch(e){}
+$("tech").value = tech;
+$("tech").addEventListener("change", () => { try { localStorage.setItem("op-tech", $("tech").value.trim()); } catch(e){} });
+
+function toast(msg){ const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(()=>t.hidden=true, 2600); }
+function banner(msg, warn){ const b = $("banner"); b.hidden = !msg; b.textContent = msg || ""; b.className = "banner" + (warn?" warn":""); }
+
+$("save").onclick = () => {
+  const name = $("tech").value.trim();
+  if (!name){ $("tech").focus(); toast("กรุณาใส่ชื่อผู้ตรวจก่อนบันทึก"); return; }
+  const changes = {};
+  for (const [id,v] of Object.entries(state.pending)) changes[id.slice(1)] = v;
+  $("save").disabled = true; $("save").textContent = "กำลังบันทึก…";
+  google.script.run
+    .withSuccessHandler(data => { state.pending = {}; toast("บันทึกแล้ว แดชบอร์ดอัปเดตทันที"); onData(data); $("save").disabled = false; $("save").textContent = "บันทึก"; })
+    .withFailureHandler(err => { toast("บันทึกไม่สำเร็จ: " + (err && err.message || "ลองอีกครั้ง")); $("save").disabled = false; $("save").textContent = "บันทึก"; })
+    .saveValues(state.date, name, changes);
+};
+
+// ---------- mode + date ----------
+function setMode(m){
+  if (m !== "form" && m !== "dashboard") m = "dashboard";
+  state.mode = m;
+  $("view-form").hidden = m !== "form"; $("view-dashboard").hidden = m !== "dashboard";
+  $("tab-form").setAttribute("aria-selected", String(m==="form")); $("tab-dash").setAttribute("aria-selected", String(m==="dashboard"));
+  if (ITEMS.length) render();
+  renderSavebar();
+}
+document.querySelector(".tabs").addEventListener("click", e => { const b = e.target.closest("[data-mode]"); if (b) setMode(b.dataset.mode); });
+$("date").value = state.date;
+$("date").addEventListener("change", () => { if ($("date").value) setDate($("date").value); });
+$("history").addEventListener("change", () => { if ($("history").value) setDate($("history").value); $("history").value = ""; });
+function setDate(d){
+  if (Object.keys(state.pending).length){ toast("บันทึกหรือยกเลิกรายการที่ค้างอยู่ก่อนเปลี่ยนวันที่"); $("date").value = state.date; return; }
+  state.date = d; $("date").value = d; state.values = {}; render(); load();
+}
+function render(){ state.mode === "form" ? renderForm() : renderDashboard(); }
+
+let PROJ = { name: "", sub: "", photo: "", note: "" };
+function applyProject(p){
+  if (!p || (p.name === PROJ.name && p.sub === PROJ.sub && p.photo === PROJ.photo && p.note === PROJ.note)) return;
+  PROJ = p;
+  $("proj-name").textContent = p.name; $("proj-sub").textContent = p.sub || ""; $("brand-name").textContent = p.name;
+  const img = $("proj-photo");
+  if (p.photo){ img.src = p.photo; img.alt = "อาคาร" + p.name; img.hidden = false; } else img.hidden = true;
+  document.title = (state.mode === "form" ? "กรอกค่าตรวจสอบ · " : "Operation Dashboard · ") + p.name;
+}
+function onData(data){
+  if (data.date !== state.date) return; // an older answer for a date the viewer already left
+  applyProject(data.project);
+  ITEMS = data.items.map(it => Object.assign(it, {kind: kindOf(it)}));
+  state.values = data.values;
+  state.days = data.days;
+  $("history").innerHTML = `<option value="">วันที่มีข้อมูล (${state.days.length})</option>` + state.days.map(d => `<option value="${d}">${d}</option>`).join("");
+  $("live").className = "live on"; $("live").lastElementChild.textContent = "อัปเดต " + new Date().toLocaleTimeString("th-TH",{hour:"2-digit",minute:"2-digit"});
+  banner("");
+  if (state.mode === "form"){ const focus = document.activeElement && document.activeElement.id; renderForm(); if (focus && $(focus)) $(focus).focus(); }
+  else renderDashboard();
+}
+function load(){
+  google.script.run
+    .withSuccessHandler(onData)
+    .withFailureHandler(err => { $("live").className = "live"; $("live").lastElementChild.textContent = "เชื่อมต่อไม่ได้"; if (!ITEMS.length) banner("โหลดข้อมูลจาก Google Sheet ไม่ได้: " + (err && err.message || ""), true); })
+    .getData(state.date);
+}
+// refresh every 30 s so the dashboard follows new entries without a reload
+setInterval(() => { if (!document.hidden) load(); }, 30000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });
+
+setMode(MODE);
+banner("กำลังโหลดข้อมูลจาก Google Sheet…");
+load();
+
+
+// ---------- printable report (save as PDF from the print dialog) ----------
+$("print-report").onclick = () => {
+  if (!ITEMS.length){ toast("ยังโหลดข้อมูลไม่เสร็จ"); return; }
+  const thai = new Date(state.date+"T00:00:00").toLocaleDateString("th-TH",{day:"numeric",month:"long",year:"numeric"});
+  const printed = new Date().toLocaleString("th-TH",{dateStyle:"medium",timeStyle:"short"});
+  let T={total:0,ok:0,bad:0,idle:0};
+  const sysRows = SYSTEMS.filter(s => ITEMS.some(i=>i.sys===s.key)).map(s => {
+    const st = sysStats(s.key); T.total+=st.total;T.ok+=st.ok;T.bad+=st.bad;T.idle+=st.idle;
+    return `<tr><td>${esc(s.key)}</td><td class="c">${st.total}</td><td class="c">${st.ok}</td><td class="c ${st.bad?'bad':''}">${st.bad}</td><td class="c">${st.idle}</td><td class="c">${st.ok+st.bad?(st.ok/st.total*100).toFixed(1)+"%":"–"}</td></tr>`;
+  }).join("");
+  const pct = T.ok+T.bad ? (T.ok/T.total*100).toFixed(1)+"%" : "–";
+  const bads = ITEMS.filter(i => statusOf(i) === false);
+  const who = [...new Set(Object.values(state.values).map(r => r.by).filter(Boolean))].join(", ") || "-";
+  const row = (i,n) => { const r = state.values[i.id]; const v = statusOf(i);
+    return `<tr><td class="c">${n}</td><td>${esc(i.name)}</td><td>${esc(i.detail)}</td><td class="c">${esc(i.ctrl)}</td><td class="c">${esc(fmt(i,r?.v))}</td><td class="c ${v===true?'ok':v===false?'bad':'idle'}">${v===true?'ปกติ':v===false?'ผิดปกติ':'ยังไม่ตรวจ'}</td><td>${r?.by?esc(r.by):""}</td></tr>`; };
+  const head = `<thead><tr><th class="c">ลำดับ</th><th>ชื่อ</th><th>รายละเอียด</th><th class="c">ค่าควบคุม</th><th class="c">ค่าที่ตรวจ</th><th class="c">สถานะ</th><th>ผู้ตรวจ</th></tr></thead>`;
+  const detail = SYSTEMS.filter(s => ITEMS.some(i=>i.sys===s.key)).map(s =>
+    `<h2>${esc(s.key)}</h2><table>${head}<tbody>${ITEMS.filter(i=>i.sys===s.key).map((i,n)=>row(i,n+1)).join("")}</tbody></table>`).join("");
+  $("report").innerHTML = `
+    <h1>รายงานการตรวจสอบระบบประจำวัน · ${esc(PROJ.name)}</h1>
+    <p class="rp-sub">วันที่ตรวจ ${thai}${PROJ.sub ? " · " + esc(PROJ.sub) : ""} · ผู้ตรวจ: ${esc(who)} · พิมพ์เมื่อ ${printed}</p>
+    <div class="rp-kpis"><div><b>${T.total}</b>รายการทั้งหมด</div><div><b>${T.ok}</b>ปกติ</div><div><b>${T.bad}</b>ผิดปกติ</div><div><b>${T.idle}</b>ยังไม่ตรวจ</div><div><b>${pct}</b>% ปกติ</div></div>
+    <h2>สรุปผลแยกตามระบบ</h2>
+    <table><thead><tr><th>ระบบ</th><th class="c">ทั้งหมด</th><th class="c">ปกติ</th><th class="c">ผิดปกติ</th><th class="c">ยังไม่ตรวจ</th><th class="c">% ปกติ</th></tr></thead><tbody>${sysRows}</tbody>
+      <tfoot><tr><th>รวมทั้งหมด</th><th class="c">${T.total}</th><th class="c">${T.ok}</th><th class="c">${T.bad}</th><th class="c">${T.idle}</th><th class="c">${pct}</th></tr></tfoot></table>
+    <h2>รายการผิดปกติ (${bads.length})</h2>
+    ${bads.length ? `<table>${head}<tbody>${bads.map((i,n)=>row(i,n+1)).join("")}</tbody></table>` : `<p>ไม่มีรายการผิดปกติ</p>`}
+    ${detail}
+    <div class="rp-sign"><div>ผู้ตรวจสอบ</div><div>หัวหน้างาน</div><div>ผู้อนุมัติ</div></div>`;
+  const title = document.title;
+  document.title = `รายงาน_${PROJECT.toUpperCase()}_${state.date}`;
+  window.print();
+  setTimeout(() => { document.title = title; }, 1000);
+};
+
+// ---------- Excel export ----------
+$("export").onclick = async () => {
+  const btn = $("export"); btn.disabled = true; btn.textContent = "กำลังสร้างไฟล์…";
+  try {
+    if (!window.ExcelJS) await new Promise((ok, no) => { const s = document.createElement("script"); s.src = ["https:", "", "cdnjs.cloudflare.com"].join("/") + "/ajax/libs/exceljs/4.4.0/exceljs.min.js"; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
+    const wb = new ExcelJS.Workbook();
+    const yellow = {type:"pattern",pattern:"solid",fgColor:{argb:"FFFFFF00"}};
+    const green = {type:"pattern",pattern:"solid",fgColor:{argb:"FF92D050"}};
+    const red = {type:"pattern",pattern:"solid",fgColor:{argb:"FFFF0000"}};
+    const border = {top:{style:"thin"},left:{style:"thin"},bottom:{style:"thin"},right:{style:"thin"}};
+    const s1 = wb.addWorksheet("สรุปผล");
+    s1.addRow(["สรุปผลการตรวจสอบระบบ - " + PROJ.name + " (" + state.date + ")"]).font = {bold:true,size:14};
+    const h1 = s1.addRow(["ระบบ","จำนวนทั้งหมด","ปกติ","ผิดปกติ","ยังไม่ตรวจ","% ปกติ"]);
+    h1.eachCell(c => { c.fill = yellow; c.font = {bold:true}; c.border = border; });
+    let T=[0,0,0,0];
+    SYSTEMS.filter(s => ITEMS.some(i=>i.sys===s.key)).forEach(s => { const st = sysStats(s.key);
+      T[0]+=st.total;T[1]+=st.ok;T[2]+=st.bad;T[3]+=st.idle;
+      const r = s1.addRow([s.key, st.total, st.ok, st.bad, st.idle, st.total? st.ok/st.total : 0]);
+      r.eachCell(c => c.border = border); r.getCell(6).numFmt = "0.0%"; if (st.bad) r.getCell(4).fill = {type:"pattern",pattern:"solid",fgColor:{argb:"FFFFC7CE"}}; });
+    const tr = s1.addRow(["รวมทั้งหมด", ...T, T[0]? T[1]/T[0] : 0]); tr.font = {bold:true}; tr.getCell(6).numFmt = "0.0%"; tr.eachCell(c => c.border = border);
+    s1.columns = [{width:34},{width:14},{width:10},{width:10},{width:12},{width:10}];
+    const s2 = wb.addWorksheet("OP_PT2");
+    s2.addRow([PROJ.name + "  วันที่ " + state.date]).getCell(1).fill = yellow;
+    const h2 = s2.addRow(["ระบบ","ชื่อ","รายละเอียด","ค่าควบคุม","ค่าที่ตรวจสอบ","สถานะ","ผู้ตรวจ","เวลา"]);
+    h2.eachCell(c => { c.fill = yellow; c.font = {bold:true}; c.border = border; });
+    ITEMS.forEach(i => { const rec = state.values[i.id]; const st = statusOf(i);
+      const r = s2.addRow([i.sys, i.name === i.detail && i.sys==="ลิฟต์และบันไดเลื่อน" ? "" : i.name, i.detail, i.ctrl, rec ? rec.v : "", st===true?"ปกติ":st===false?"ผิดปกติ":"", rec?.by || "", rec?.at ? new Date(rec.at).toLocaleString("th-TH") : ""]);
+      r.eachCell({includeEmpty:true}, c => c.border = border);
+      if (i.kind === "PCT" && typeof rec?.v === "number") r.getCell(5).numFmt = "0%";
+      r.getCell(5).alignment = r.getCell(4).alignment = {horizontal:"center"};
+      if (st !== null) r.getCell(6).fill = st ? green : red; });
+    s2.columns = [{width:32},{width:20},{width:44},{width:16},{width:14},{width:10},{width:18},{width:20}];
+    const buf = await wb.xlsx.writeBuffer();
+    const filename = `OP_${PROJECT.toUpperCase()}_${state.date.split("-").reverse().join("")}.xlsx`;
+    const blob = new Blob([buf], {type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    toast("ดาวน์โหลด " + filename);
+  } catch(e){ toast("สร้างไฟล์ไม่สำเร็จ"); }
+  finally { btn.disabled = false; btn.textContent = "ดาวน์โหลด Excel (มีสีสถานะ)"; }
+};
+</script>
