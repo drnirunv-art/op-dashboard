@@ -64,7 +64,10 @@ details summary{cursor:pointer;font-weight:600}
 <script>
 // LINE's in-app browser misbehaves with forms and files, so ask LINE to reopen the page in Chrome/Safari (once)
 if (/ Line\//i.test(navigator.userAgent) && !new URLSearchParams(location.search).has("openExternalBrowser")) {
-  const u = new URL(location.href); u.searchParams.set("openExternalBrowser", "1"); location.replace(u.toString());
+  // carry the key in the query too, in case LINE drops the #hash when it hands the page to Chrome/Safari
+  const u = new URL(location.href), key = new URLSearchParams(u.hash.slice(1)).get("t");
+  if (key){ u.searchParams.set("t", key); u.hash = ""; }
+  u.searchParams.set("openExternalBrowser", "1"); location.replace(u.toString());
 }
 const API_URL = "https://script.google.com/macros/s/AKfycbyWGb4sbTMkBrBe7TKTmBSeVSEPuqXODlz6QcVOVh4eHnAl3jx8G4G7EiHtdBZYHqor/exec";
 // the access key travels in the #hash so it never reaches GitHub's server logs
