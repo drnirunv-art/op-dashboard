@@ -149,6 +149,10 @@ tr.total td{font-weight:700}
 </div>
 
 <script>
+// LINE's in-app browser cannot save files, so ask LINE to reopen the page in Chrome/Safari (once; the flag stops a loop)
+if (/ Line\//i.test(navigator.userAgent) && !new URLSearchParams(location.search).has("openExternalBrowser")) {
+  const u = new URL(location.href); u.searchParams.set("openExternalBrowser", "1"); location.replace(u.toString());
+}
 const API_URL = "https://script.google.com/macros/s/AKfycbyWGb4sbTMkBrBe7TKTmBSeVSEPuqXODlz6QcVOVh4eHnAl3jx8G4G7EiHtdBZYHqor/exec";
 const SITE = "https://drnirunv-art.github.io/";
 const HOSPITALS = [
