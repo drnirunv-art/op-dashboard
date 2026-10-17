@@ -90,6 +90,12 @@ tr.total td{font-weight:700}
 #pdf-copy th{font-size:11px}
 #pdf-copy td.name{font-size:12px}
 #pdf-copy tr{break-inside:avoid}
+#pdf-copy table.month{border-spacing:1px}
+#pdf-copy .month td{min-width:0;font-size:10px;padding:3px 0;line-height:1.15}
+#pdf-copy .month th{font-size:9.5px;padding:1px;min-width:0}
+#pdf-copy .month td.name{font-size:10px;padding:1px 4px 1px 0;line-height:1.15}
+#pdf-copy .month td.name small{display:inline;font-size:8.5px;margin-left:4px}
+#pdf-copy .month tbody tr.first td{border-top-width:3px}
 #pdf-copy *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 @media (max-width:560px){.wrap{padding:16px 12px}.ctrl{margin-left:0}}
 </style>
@@ -129,7 +135,7 @@ tr.total td{font-weight:700}
 
   <section id="view-month" hidden>
     <div class="card">
-      <h2 id="month-title">การเข้าตรวจรายวัน</h2>
+      <div class="card-head"><h2 id="month-title">การเข้าตรวจรายวัน</h2><button class="btn" id="pdf-month">บันทึกรายงาน PDF</button></div>
       <div class="legend">
         <span><i style="--c:var(--done)"></i>ช่างเข้าตรวจ</span>
         <span><i style="--c:var(--miss)"></i>ช่างไม่ได้เข้าตรวจ</span>
@@ -229,7 +235,7 @@ function renderDay(date){
 }
 
 // ---------- page 2: one month, done / not done + normal / abnormal with % ----------
-let monthData = {}, monthToken = 0;
+let monthData = {}, monthToken = 0, monthLoaded = "";
 async function loadMonth(){
   const month = $("month").value || bkk().slice(0, 7), token = ++monthToken;
   $("live").textContent = "กำลังโหลด…";
@@ -240,7 +246,7 @@ async function loadMonth(){
     catch (e) { monthData[h.key] = { error: e.message }; }
     if (token === monthToken) renderMonth(month);
   }));
-  if (token === monthToken) $("live").textContent = "อัปเดต " + new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
+  if (token === monthToken){ monthLoaded = month; $("live").textContent = "อัปเดต " + new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }); }
 }
 function renderMonth(month){
   const [y, m] = month.split("-").map(Number);
@@ -293,12 +299,17 @@ async function sharePdf(file){
   try { await navigator.share({ files: [file], title: file.name }); }
   catch (e) { if (e.name !== "AbortError") savePdf(file); }
 }
-$("pdf-day").onclick = async () => {
-  const btn = $("pdf-day"), date = $("date").value || bkk();
+// The report is 2 pages: page 1 = systems for the chosen day, page 2 = check calendar for that day's month
+const dayReady = date => HOSPITALS.every(h => dayData[h.key] && (dayData[h.key].date === date || dayData[h.key].error));
+const monthReady = month => monthLoaded === month && HOSPITALS.every(h => monthData[h.key]);
+async function makeReport(btn, date){
   if (readyPdf && readyPdf.date === date){ const f = readyPdf.file; readyPdf = null; btn.textContent = "บันทึกรายงาน PDF"; return sharePdf(f); }
   readyPdf = null;
-  if (HOSPITALS.some(h => !dayData[h.key] || (dayData[h.key].date !== date && !dayData[h.key].error))){ $("live").textContent = "รอโหลดข้อมูลให้ครบก่อน"; return; }
-  btn.disabled = true; btn.textContent = "กำลังสร้าง PDF…";
+  btn.disabled = true; btn.textContent = "กำลังโหลดข้อมูล…";
+  const month = date.slice(0, 7);
+  if ($("date").value !== date || !dayReady(date)){ $("date").value = date; await loadDay(); }
+  if ($("month").value !== month || !monthReady(month)){ $("month").value = month; await loadMonth(); }
+  btn.textContent = "กำลังสร้าง PDF…";
   const filename = `รายงานรวม12โรง_${date}.pdf`;
   const sx = window.scrollX, sy = window.scrollY; window.scrollTo(0, 0);
   let file = null;
@@ -310,7 +321,12 @@ $("pdf-day").onclick = async () => {
       <p class="pdf-sub">วันที่ตรวจ ${thai} · พิมพ์เมื่อ ${new Date().toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short" })}</p>
       <div class="kpis">${$("kpis").innerHTML}</div>
       <div class="legend">${document.querySelector("#view-day .legend").innerHTML}</div>
-      <table>${$("day-table").innerHTML}</table>`;
+      <table>${$("day-table").innerHTML}</table>
+      <div class="html2pdf__page-break"></div>
+      <h1>${esc($("month-title").textContent)}</h1>
+      <p class="pdf-sub">ตัวเลขในช่อง = % ความพร้อมของวันนั้น (ปกติ ÷ ทั้งหมด)</p>
+      <div class="legend">${document.querySelector("#view-month .legend").innerHTML}</div>
+      <table class="month">${$("month-table").innerHTML}</table>`;
     el.querySelectorAll("a").forEach(a => a.replaceWith(document.createTextNode(a.textContent)));
     const blob = await html2pdf().set({
       margin: [8, 8, 8, 8], filename,
@@ -332,6 +348,12 @@ $("pdf-day").onclick = async () => {
   } else if (IN_LINE){
     $("live").textContent = "LINE บันทึกไฟล์ไม่ได้ กด ⋮ แล้วเลือก เปิดในเบราว์เซอร์อื่น";
   } else savePdf(file);
+}
+$("pdf-day").onclick = () => makeReport($("pdf-day"), $("date").value || bkk());
+// from page 2: today if the month is the current one, otherwise its last day
+$("pdf-month").onclick = () => {
+  const m = $("month").value || bkk().slice(0, 7), [y, mo] = m.split("-").map(Number);
+  makeReport($("pdf-month"), m === bkk().slice(0, 7) ? bkk() : `${m}-${String(new Date(y, mo, 0).getDate()).padStart(2, "0")}`);
 };
 
 // ---------- tabs, inputs, refresh ----------
