@@ -88,7 +88,7 @@ function setMsg(text, kind){ $("msg").textContent = text; $("msg").className = "
 function membersHtml(h){
   const list = h.members.slice();
   while (list.length < DEFAULT_ROWS) list.push("");
-  return `<label class="f">อีเมลลูกทีม (เพิ่มหรือลบได้ ช่องละ 1 อีเมล)</label>
+  return `<label class="f">3 · อีเมลลูกทีม (เพิ่มหรือลบได้ ช่องละ 1 อีเมล)</label>
     <div class="members" data-members="${esc(h.key)}">${list.map((m, i) => memberRow(m, i)).join("")}</div>
     <button class="btn add" data-add="${esc(h.key)}" type="button">+ เพิ่มช่องอีเมล</button>`;
 }
@@ -97,7 +97,7 @@ const memberRow = (m, i) => `<div class="m"><span>${i + 1}</span><input type="em
 function hospitalCard(h, admin){
   return `<section class="card" data-key="${esc(h.key)}">
     <h2>${esc(h.name)}</h2>
-    <label class="f">อีเมลกลุ่มของโรงนี้</label>
+    <label class="f">2 · อีเมลกลุ่มของโรงนี้</label>
     <input type="email" class="group" inputmode="email" autocomplete="off" value="${esc(h.group)}" placeholder="${admin ? "เช่น tw-pt1@googlegroups.com" : "(ผู้ดูแลระบบเป็นผู้กำหนด)"}" ${admin ? "" : "readonly"}>
     ${membersHtml(h)}
   </section>`;
@@ -122,6 +122,10 @@ function render(){
     $("app").innerHTML = `
       <h1>อีเมลลูกทีมรับแจ้งเตือน</h1>
       <p class="lead">ถ้าวันไหนยังไม่ได้บันทึกการตรวจ ระบบจะส่งอีเมลเตือนถึงทุกอีเมลด้านล่าง ใส่อีเมลของลูกทีม แล้วกด <b>บันทึก</b> ถ้ามีคนลาออก กด ✕ เพื่อลบออก</p>
+      <section class="card">
+        <h2>1 · อีเมลรับสรุปรวม (ผู้ดูแลระบบ)</h2>
+        <input type="text" value="${esc(DATA.summaryTo)}" readonly>
+      </section>
       ${hospitalCard(h, false)}`;
   }
   $("bar").hidden = false;
