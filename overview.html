@@ -73,6 +73,24 @@ tr.total td{font-weight:700}
 .month tbody tr.first td{border-top:6px solid transparent}
 .note{color:var(--muted);font-size:13px;margin:8px 0 0}
 .loading{color:var(--muted);padding:20px 4px}
+.card-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin-bottom:10px}
+.card-head h2{margin:0}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:8px 16px;font-weight:600;cursor:pointer}
+.btn:disabled{opacity:.6;cursor:progress}
+/* PDF copy: always light so it prints cleanly */
+#pdf-copy{--panel:#fff;--fg:#111;--muted:#555;--line:#ccc;--head:#ffe600;--head-ink:#1d1d00;--none:#e6ecee;--none-ink:#6a7c82;
+  background:#fff;color:#111;font-family:var(--f-body);padding:0}
+#pdf-copy h1{font-size:20px;margin:0 0 2px}
+#pdf-copy .pdf-sub{color:#555;margin:0 0 10px;font-size:13px}
+#pdf-copy .kpis{grid-template-columns:repeat(5,1fr);margin-bottom:10px}
+#pdf-copy .kpi{box-shadow:none;border:1px solid #ccc;padding:8px 10px}
+#pdf-copy .kpi b{font-size:1.3rem}
+#pdf-copy td.name,#pdf-copy th.name{position:static;background:#fff}
+#pdf-copy td{font-size:11px;padding:5px 2px}
+#pdf-copy th{font-size:11px}
+#pdf-copy td.name{font-size:12px}
+#pdf-copy tr{break-inside:avoid}
+#pdf-copy *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 @media (max-width:560px){.wrap{padding:16px 12px}.ctrl{margin-left:0}}
 </style>
 </head>
@@ -97,7 +115,7 @@ tr.total td{font-weight:700}
   <section id="view-day">
     <div class="kpis" id="kpis"></div>
     <div class="card">
-      <h2>ผลการตรวจแต่ละระบบ (ปกติ / ทั้งหมด)</h2>
+      <div class="card-head"><h2>ผลการตรวจแต่ละระบบ (ปกติ / ทั้งหมด)</h2><button class="btn" id="pdf-day">บันทึกรายงาน PDF</button></div>
       <div class="legend">
         <span><i style="--c:var(--ok)"></i>ตรวจครบ ปกติทั้งหมด</span>
         <span><i style="--c:var(--bad)"></i>มีรายการผิดปกติ</span>
@@ -259,6 +277,62 @@ function renderMonth(month){
   const thai = new Date(month + "-01T00:00:00").toLocaleDateString("th-TH", { month: "long", year: "numeric" });
   $("month-title").textContent = `การเข้าตรวจรายวัน · ${thai}`;
 }
+
+// ---------- PDF of page 1 ----------
+const IS_MOBILE = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+const IN_LINE = / Line\//i.test(navigator.userAgent);
+let readyPdf = null; // phones only open the share sheet straight after a tap, so a finished PDF waits for a second tap
+function savePdf(file){
+  const url = URL.createObjectURL(file);
+  const a = document.createElement("a"); a.href = url; a.download = file.name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  $("live").textContent = "บันทึกไฟล์ " + file.name;
+}
+async function sharePdf(file){
+  try { await navigator.share({ files: [file], title: file.name }); }
+  catch (e) { if (e.name !== "AbortError") savePdf(file); }
+}
+$("pdf-day").onclick = async () => {
+  const btn = $("pdf-day"), date = $("date").value || bkk();
+  if (readyPdf && readyPdf.date === date){ const f = readyPdf.file; readyPdf = null; btn.textContent = "บันทึกรายงาน PDF"; return sharePdf(f); }
+  readyPdf = null;
+  if (HOSPITALS.some(h => !dayData[h.key] || (dayData[h.key].date !== date && !dayData[h.key].error))){ $("live").textContent = "รอโหลดข้อมูลให้ครบก่อน"; return; }
+  btn.disabled = true; btn.textContent = "กำลังสร้าง PDF…";
+  const filename = `รายงานรวม12โรง_${date}.pdf`;
+  const sx = window.scrollX, sy = window.scrollY; window.scrollTo(0, 0);
+  let file = null;
+  try {
+    if (!window.html2pdf) await new Promise((ok, no) => { const s = document.createElement("script"); s.src = ["https:", "", "cdnjs.cloudflare.com"].join("/") + "/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
+    const thai = new Date(date + "T00:00:00").toLocaleDateString("th-TH", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    const el = document.createElement("div"); el.id = "pdf-copy"; el.style.width = "1000px";
+    el.innerHTML = `<h1>รายงานสรุปผลการตรวจสอบระบบ 12 โรงพยาบาล</h1>
+      <p class="pdf-sub">วันที่ตรวจ ${thai} · พิมพ์เมื่อ ${new Date().toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short" })}</p>
+      <div class="kpis">${$("kpis").innerHTML}</div>
+      <div class="legend">${document.querySelector("#view-day .legend").innerHTML}</div>
+      <table>${$("day-table").innerHTML}</table>`;
+    el.querySelectorAll("a").forEach(a => a.replaceWith(document.createTextNode(a.textContent)));
+    const blob = await html2pdf().set({
+      margin: [8, 8, 8, 8], filename,
+      image: { type: "jpeg", quality: 0.95 },
+      html2canvas: { scale: IS_MOBILE ? 1.4 : 1.8, backgroundColor: "#ffffff", scrollX: 0, scrollY: 0 },
+      jsPDF: { unit: "mm", format: "a4", orientation: "landscape" },
+      pagebreak: { mode: ["css", "legacy"], avoid: ["tr", ".kpis"] }
+    }).from(el).outputPdf("blob");
+    file = new File([blob], filename, { type: "application/pdf" });
+  } catch (e) {
+    $("live").textContent = "สร้าง PDF ไม่สำเร็จ ลองใหม่อีกครั้ง";
+  } finally {
+    window.scrollTo(sx, sy);
+    btn.disabled = false; btn.textContent = "บันทึกรายงาน PDF";
+  }
+  if (!file) return;
+  if (IS_MOBILE && navigator.canShare && navigator.canShare({ files: [file] })){
+    readyPdf = { file, date }; btn.textContent = "แตะอีกครั้งเพื่อบันทึก / แชร์ PDF";
+  } else if (IN_LINE){
+    $("live").textContent = "LINE บันทึกไฟล์ไม่ได้ กด ⋮ แล้วเลือก เปิดในเบราว์เซอร์อื่น";
+  } else savePdf(file);
+};
 
 // ---------- tabs, inputs, refresh ----------
 function setView(v){
