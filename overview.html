@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ภาพรวม 12 โรงพยาบาล</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+:root{
+  --bg:#f3f6f7; --panel:#ffffff; --fg:#14262c; --muted:#5b6f76; --line:#d6e0e3;
+  --accent:#0f7c9c; --accent-ink:#ffffff; --head:#ffe600; --head-ink:#1d1d00;
+  --shadow:0 10px 30px rgba(20,38,44,.10);
+  /* status colors match the Google Sheet (ปกติ #92D050 / ผิดปกติ #FF0000) */
+  --ok:#92D050; --ok-ink:#173d00; --bad:#FF0000; --bad-ink:#ffffff;
+  --done:#1b6e35; --done-ink:#ffffff; --miss:#FF9800; --miss-ink:#2b1700;
+  --part:#FFE082; --part-ink:#3d2e00; --none:#e6ecee; --none-ink:#6a7c82;
+  --f-body:"IBM Plex Sans Thai",system-ui,"Leelawadee UI",Tahoma,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0e1719; --panel:#162326; --fg:#e4eef0; --muted:#94a9af; --line:#2a3b3f;
+  --accent:#3fb3d3; --accent-ink:#04212a; --head:#d9c400; --none:#22333a; --none-ink:#94a9af;
+  --shadow:0 10px 30px rgba(0,0,0,.4); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1719; --panel:#162326; --fg:#e4eef0; --muted:#94a9af; --line:#2a3b3f;
+  --accent:#3fb3d3; --accent-ink:#04212a; --head:#d9c400; --none:#22333a; --none-ink:#94a9af;
+  --shadow:0 10px 30px rgba(0,0,0,.4); color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.45}
+button,input,select{font:inherit;color:inherit}
+.wrap{max-width:1400px;margin:0 auto;padding:16px}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;margin-bottom:14px}
+header h1{margin:0;font-size:clamp(1.25rem,2.4vw,1.7rem)}
+header p{margin:0;color:var(--muted)}
+.tabs{display:flex;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px}
+.tabs button{border:0;background:none;padding:8px 14px;border-radius:9px;font-weight:600;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
+.ctrl{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-left:auto}
+.ctrl input{border:1px solid var(--line);background:var(--panel);border-radius:9px;padding:7px 10px}
+.ctrl .live{color:var(--muted);font-size:13px}
+.card{background:var(--panel);border-radius:12px;box-shadow:var(--shadow);padding:16px;margin-bottom:16px}
+.card h2{margin:0 0 10px;font-size:1.05rem}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.kpi{background:var(--panel);border-radius:12px;box-shadow:var(--shadow);padding:12px 14px}
+.kpi b{display:block;font-size:1.6rem;font-family:var(--f-mono)}
+.kpi span{color:var(--muted);font-size:13px}
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:13px;color:var(--muted);margin:4px 0 10px}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:6px;background:var(--c)}
+.tscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{border-collapse:separate;border-spacing:3px;width:100%}
+th{font-size:12.5px;font-weight:600;color:var(--muted);text-align:center;padding:4px;vertical-align:bottom}
+th.h{background:var(--head);color:var(--head-ink);border-radius:6px}
+td{text-align:center;border-radius:6px;padding:6px 4px;font-family:var(--f-mono);font-size:13px;white-space:nowrap}
+td.name,th.name{text-align:left;font-family:var(--f-body);font-size:14px;white-space:nowrap;position:sticky;left:0;background:var(--panel);z-index:1;padding-right:10px}
+td.name a{color:inherit;font-weight:600;text-decoration:none}
+td.name a:hover{text-decoration:underline}
+td.name small{display:block;color:var(--muted);font-weight:400;font-size:12px}
+.s-ok{background:var(--ok);color:var(--ok-ink)}
+.s-bad{background:var(--bad);color:var(--bad-ink)}
+.s-part{background:var(--part);color:var(--part-ink)}
+.s-none{background:var(--none);color:var(--none-ink)}
+.s-done{background:var(--done);color:var(--done-ink)}
+.s-miss{background:var(--miss);color:var(--miss-ink)}
+.s-future{background:transparent;color:var(--none-ink)}
+td.err{background:var(--none);color:var(--muted);font-family:var(--f-body)}
+td small{display:block;font-size:11px;opacity:.85}
+tr.total td{font-weight:700}
+.sub td.name{font-weight:400;color:var(--muted);font-size:12.5px;padding-left:18px}
+.month td{min-width:30px;padding:5px 2px;font-size:12px}
+.month th.d{min-width:30px}
+.month th.we{color:var(--accent)}
+.month tbody tr.first td{border-top:6px solid transparent}
+.note{color:var(--muted);font-size:13px;margin:8px 0 0}
+.loading{color:var(--muted);padding:20px 4px}
+@media (max-width:560px){.wrap{padding:16px 12px}.ctrl{margin-left:0}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>ภาพรวมการตรวจสอบระบบ 12 โรงพยาบาล</h1>
+      <p id="subtitle">ข้อมูลออนไลน์จาก Google Sheet ของแต่ละโรง</p>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" id="tab-day" aria-selected="true">หน้า 1 · ภาพรวมรายระบบ</button>
+      <button role="tab" id="tab-month" aria-selected="false">หน้า 2 · การเข้าตรวจรายเดือน</button>
+    </nav>
+    <div class="ctrl">
+      <label id="date-wrap">วันที่ <input type="date" id="date"></label>
+      <label id="month-wrap" hidden>เดือน <input type="month" id="month"></label>
+      <span class="live" id="live"></span>
+    </div>
+  </header>
+
+  <section id="view-day">
+    <div class="kpis" id="kpis"></div>
+    <div class="card">
+      <h2>ผลการตรวจแต่ละระบบ (ปกติ / ทั้งหมด)</h2>
+      <div class="legend">
+        <span><i style="--c:var(--ok)"></i>ตรวจครบ ปกติทั้งหมด</span>
+        <span><i style="--c:var(--bad)"></i>มีรายการผิดปกติ</span>
+        <span><i style="--c:var(--part)"></i>ตรวจยังไม่ครบ</span>
+        <span><i style="--c:var(--none)"></i>ยังไม่ได้ตรวจ</span>
+      </div>
+      <div class="tscroll"><table id="day-table"></table></div>
+      <p class="note">กดชื่อโรงพยาบาลเพื่อเปิดแดชบอร์ดของโรงนั้น · อัปเดตอัตโนมัติทุก 2 นาที</p>
+    </div>
+  </section>
+
+  <section id="view-month" hidden>
+    <div class="card">
+      <h2 id="month-title">การเข้าตรวจรายวัน</h2>
+      <div class="legend">
+        <span><i style="--c:var(--done)"></i>ช่างเข้าตรวจ</span>
+        <span><i style="--c:var(--miss)"></i>ช่างไม่ได้เข้าตรวจ</span>
+        <span><i style="--c:var(--ok)"></i>ปกติทุกค่า (ตัวเลข = % ความพร้อม)</span>
+        <span><i style="--c:var(--bad)"></i>มีค่าผิดปกติ (ตัวเลข = % ความพร้อม)</span>
+      </div>
+      <div class="tscroll"><table class="month" id="month-table"></table></div>
+      <p class="note">% ความพร้อม = จำนวนรายการที่ปกติ ÷ จำนวนรายการทั้งหมดของโรงนั้นในวันนั้น · วันที่ยังมาไม่ถึงจะเว้นว่าง</p>
+    </div>
+  </section>
+</div>
+
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbyWGb4sbTMkBrBe7TKTmBSeVSEPuqXODlz6QcVOVh4eHnAl3jx8G4G7EiHtdBZYHqor/exec";
+const SITE = "https://drnirunv-art.github.io/";
+const HOSPITALS = [
+  { key: "pt1", short: "พญาไท 1" }, { key: "pt2", short: "พญาไท 2" }, { key: "pt3", short: "พญาไท 3" },
+  { key: "ptn", short: "พญาไท นวมินทร์" }, { key: "ptp", short: "พญาไท พหลโยธิน" }, { key: "pts", short: "พญาไท ศรีราชา" },
+  { key: "ptw", short: "พญาไท บ่อวิน" }, { key: "plc", short: "เปาโล โชคชัย 4" }, { key: "pld", short: "เปาโล พระประแดง" },
+  { key: "plk", short: "เปาโล เกษตร" }, { key: "plr", short: "เปาโล รังสิต" }, { key: "pls", short: "เปาโล สมุทรปราการ" }
+];
+const SYSTEMS = [
+  { key: "ระบบไฟฟ้าและสำรองไฟ", label: "ไฟฟ้า / สำรองไฟ" },
+  { key: "ระบบสำรองน้ำอาคาร", label: "สำรองน้ำอาคาร" },
+  { key: "ระบบปรับอากาศและระบายอากาศ", label: "ปรับอากาศ / ระบายอากาศ" },
+  { key: "Special room", label: "Special room" },
+  { key: "ลิฟต์และบันไดเลื่อน", label: "ลิฟต์ / บันไดเลื่อน" },
+  { key: "ระบบป้องกันอัคคีภัย", label: "ป้องกันอัคคีภัย" },
+  { key: "ระบบสุขาภิบาลและบำบัดน้ำเสีย", label: "สุขาภิบาล / บำบัดน้ำเสีย" },
+  { key: "ระบบงานอาคารหรืองานโยธา", label: "อาคาร / โยธา" }
+];
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const bkk = () => new Date(Date.now() + 7*3600e3).toISOString().slice(0,10);
+const dashUrl = key => key === "pt2" ? SITE + "pt2-dashboard/" : SITE + "op-dashboard/?p=" + key;
+const pct = (a, b) => b ? Math.round(a / b * 1000) / 10 : 0;
+
+async function api(params){
+  const r = await fetch(API_URL + "?" + new URLSearchParams(params), { credentials: "omit" });
+  const d = await r.json();
+  if (d && d.error) throw new Error(d.error);
+  return d;
+}
+// cell class for "ok / total": complete & all normal = green, any abnormal = red, partly checked = yellow, nothing = grey
+function sysClass(s){
+  if (!s || !s.total) return "s-none";
+  if (s.bad) return "s-bad";
+  if (!s.checked) return "s-none";
+  return s.checked >= s.total ? "s-ok" : "s-part";
+}
+
+// ---------- page 1: one day, hospital × system ----------
+let dayData = {}, dayToken = 0;
+async function loadDay(){
+  const date = $("date").value || bkk(), token = ++dayToken;
+  $("live").textContent = "กำลังโหลด…";
+  renderDay(date);
+  await Promise.all(HOSPITALS.map(async h => {
+    try { dayData[h.key] = await api({ api: "summary", p: h.key, date }); }
+    catch (e) { dayData[h.key] = { error: e.message }; }
+    if (token === dayToken) renderDay(date);
+  }));
+  if (token === dayToken) $("live").textContent = "อัปเดต " + new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
+}
+function renderDay(date){
+  const cols = SYSTEMS.filter(s => HOSPITALS.some(h => dayData[h.key]?.date === date && dayData[h.key].systems?.[s.key]));
+  const showCols = cols.length ? cols : SYSTEMS;
+  const head = `<thead><tr><th class="name">โรงพยาบาล</th>${showCols.map(s => `<th class="h">${esc(s.label)}</th>`).join("")}<th class="h">รวม</th><th class="h">% ความพร้อม</th></tr></thead>`;
+  const T = { total: 0, ok: 0, bad: 0, checked: 0 }, sysT = {};
+  let done = 0, loaded = 0;
+  const rows = HOSPITALS.map(h => {
+    const d = dayData[h.key];
+    const name = `<td class="name"><a href="${dashUrl(h.key)}" target="_blank" rel="noopener">${esc(h.short)}</a>${d?.by?.length ? `<small>ผู้ตรวจ: ${esc(d.by.join(", "))}</small>` : ""}</td>`;
+    if (!d || d.date !== date) return `<tr>${name}<td class="err" colspan="${showCols.length + 2}">กำลังโหลด…</td></tr>`;
+    if (d.error) return `<tr>${name}<td class="err" colspan="${showCols.length + 2}">โหลดไม่ได้: ${esc(d.error)}</td></tr>`;
+    loaded++; if (d.checked) done++;
+    T.total += d.total; T.ok += d.ok; T.bad += d.bad; T.checked += d.checked;
+    const cells = showCols.map(s => {
+      const x = d.systems[s.key];
+      if (!x) return `<td class="s-future">–</td>`;
+      const t = sysT[s.key] || (sysT[s.key] = { total: 0, ok: 0, bad: 0, checked: 0 });
+      t.total += x.total; t.ok += x.ok; t.bad += x.bad; t.checked += x.checked;
+      return `<td class="${sysClass(x)}" title="ตรวจแล้ว ${x.checked}/${x.total} · ผิดปกติ ${x.bad}">${x.ok}/${x.total}</td>`;
+    }).join("");
+    return `<tr>${name}${cells}<td class="${sysClass(d)}">${d.ok}/${d.total}</td><td class="${sysClass(d)}">${d.checked ? pct(d.ok, d.total) + "%" : "–"}</td></tr>`;
+  }).join("");
+  const totalRow = `<tr class="total"><td class="name">รวม 12 โรง</td>${showCols.map(s => { const t = sysT[s.key]; return t ? `<td class="${sysClass(t)}">${t.ok}/${t.total}</td>` : `<td class="s-future">–</td>`; }).join("")}<td class="${sysClass(T)}">${T.ok}/${T.total}</td><td class="${sysClass(T)}">${T.checked ? pct(T.ok, T.total) + "%" : "–"}</td></tr>`;
+  $("day-table").innerHTML = head + `<tbody>${rows}${totalRow}</tbody>`;
+  $("kpis").innerHTML = `
+    <div class="kpi"><b>${done}/${HOSPITALS.length}</b><span>โรงที่ช่างเข้าตรวจแล้ววันนี้</span></div>
+    <div class="kpi"><b>${T.checked ? pct(T.ok, T.total) + "%" : "–"}</b><span>% ความพร้อมรวม (ปกติ ÷ ทั้งหมด)</span></div>
+    <div class="kpi"><b>${T.ok}</b><span>รายการปกติ</span></div>
+    <div class="kpi"><b>${T.bad}</b><span>รายการผิดปกติ</span></div>
+    <div class="kpi"><b>${T.total - T.checked}</b><span>ยังไม่ตรวจ (จาก ${T.total})</span></div>`;
+  const thai = new Date(date + "T00:00:00").toLocaleDateString("th-TH", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  $("subtitle").textContent = `${thai} · โหลดแล้ว ${loaded}/${HOSPITALS.length} โรง`;
+}
+
+// ---------- page 2: one month, done / not done + normal / abnormal with % ----------
+let monthData = {}, monthToken = 0;
+async function loadMonth(){
+  const month = $("month").value || bkk().slice(0, 7), token = ++monthToken;
+  $("live").textContent = "กำลังโหลด…";
+  monthData = {};
+  renderMonth(month);
+  await Promise.all(HOSPITALS.map(async h => {
+    try { monthData[h.key] = await api({ api: "month", p: h.key, month }); }
+    catch (e) { monthData[h.key] = { error: e.message }; }
+    if (token === monthToken) renderMonth(month);
+  }));
+  if (token === monthToken) $("live").textContent = "อัปเดต " + new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
+}
+function renderMonth(month){
+  const [y, m] = month.split("-").map(Number);
+  const nDays = new Date(y, m, 0).getDate(), today = bkk();
+  const days = Array.from({ length: nDays }, (_, i) => `${month}-${String(i + 1).padStart(2, "0")}`);
+  const wd = d => new Date(d + "T00:00:00").getDay();
+  const head = `<thead><tr><th class="name">โรงพยาบาล</th>${days.map(d => `<th class="d ${wd(d) === 0 || wd(d) === 6 ? "we" : ""}">${Number(d.slice(8))}</th>`).join("")}<th class="h">เข้าตรวจ</th><th class="h">เฉลี่ย % พร้อม</th></tr></thead>`;
+  const body = HOSPITALS.map(h => {
+    const md = monthData[h.key];
+    const link = `<a href="${dashUrl(h.key)}" target="_blank" rel="noopener">${esc(h.short)}</a>`;
+    if (!md) return `<tr class="first"><td class="name">${link}</td><td class="err" colspan="${nDays + 2}">กำลังโหลด…</td></tr>`;
+    if (md.error) return `<tr class="first"><td class="name">${link}</td><td class="err" colspan="${nDays + 2}">โหลดไม่ได้: ${esc(md.error)}</td></tr>`;
+    let past = 0, did = 0, sumPct = 0;
+    const doneCells = [], resCells = [];
+    days.forEach(d => {
+      const x = md.days[d];
+      if (d > today){ doneCells.push(`<td class="s-future"></td>`); resCells.push(`<td class="s-future"></td>`); return; }
+      past++;
+      if (!x){
+        doneCells.push(`<td class="s-miss" title="${d}: ไม่ได้เข้าตรวจ">✗</td>`);
+        resCells.push(`<td class="s-miss" title="${d}: ไม่มีข้อมูล">–</td>`);
+        return;
+      }
+      did++;
+      const p = pct(x.ok, md.total); sumPct += p;
+      doneCells.push(`<td class="s-done" title="${d}: ตรวจ ${x.checked}/${md.total} รายการ">✓</td>`);
+      resCells.push(`<td class="${x.bad ? "s-bad" : "s-ok"}" title="${d}: ปกติ ${x.ok} · ผิดปกติ ${x.bad} · ตรวจ ${x.checked}/${md.total}">${Math.round(p)}</td>`);
+    });
+    const avg = did ? Math.round(sumPct / did * 10) / 10 + "%" : "–";
+    return `<tr class="first"><td class="name">${link}<small>เข้าตรวจ</small></td>${doneCells.join("")}<td class="${did < past ? "s-miss" : "s-done"}">${did}/${past}</td><td></td></tr>
+      <tr><td class="name"><small>ปกติ / ไม่ปกติ (% พร้อม)</small></td>${resCells.join("")}<td></td><td class="${did ? "s-ok" : "s-none"}">${avg}</td></tr>`;
+  }).join("");
+  $("month-table").innerHTML = head + `<tbody>${body}</tbody>`;
+  const thai = new Date(month + "-01T00:00:00").toLocaleDateString("th-TH", { month: "long", year: "numeric" });
+  $("month-title").textContent = `การเข้าตรวจรายวัน · ${thai}`;
+}
+
+// ---------- tabs, inputs, refresh ----------
+function setView(v){
+  const month = v === "month";
+  $("view-day").hidden = month; $("view-month").hidden = !month;
+  $("tab-day").setAttribute("aria-selected", String(!month)); $("tab-month").setAttribute("aria-selected", String(month));
+  $("date-wrap").hidden = month; $("month-wrap").hidden = !month;
+  const u = new URL(location.href); u.searchParams.set("view", month ? "month" : "day"); history.replaceState(null, "", u);
+  month ? loadMonth() : loadDay();
+}
+$("tab-day").onclick = () => setView("day");
+$("tab-month").onclick = () => setView("month");
+$("date").value = bkk(); $("month").value = bkk().slice(0, 7);
+$("date").onchange = () => loadDay();
+$("month").onchange = () => loadMonth();
+setInterval(() => { if (document.hidden) return; $("view-month").hidden ? loadDay() : loadMonth(); }, 120000);
+setView(new URLSearchParams(location.search).get("view") === "month" ? "month" : "day");
+</script>
+</body>
+</html>
