@@ -60,6 +60,10 @@ td.ok{background:var(--ok);color:var(--ok-ink)} td.bad{background:var(--bad);col
 td.none{color:var(--none-ink)} td.we{color:var(--accent)}
 tr.off td{opacity:.45}
 td small{display:block;font-size:11px;opacity:.85;font-family:var(--f-body)}
+td.cps{padding:3px;vertical-align:top}
+.cp{display:flex;justify-content:space-between;gap:8px;align-items:center;border-radius:5px;padding:2px 6px;margin:2px 0;font-size:12px;background:var(--none);color:var(--none-ink)}
+.cp b{font-family:var(--f-mono);font-weight:500} .cp span{text-align:left}
+.cp.ok{background:var(--ok);color:var(--ok-ink)} .cp.bad{background:var(--bad);color:var(--bad-ink)}
 .note{color:var(--muted);font-size:13px;margin:8px 0 0}
 .legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--muted);margin:0 0 10px}
 .legend i{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:6px;background:var(--c)}
@@ -131,7 +135,12 @@ async function apiSave(date, by, changes){
   const d = await r.json(); if (d.error) throw new Error(d.error); return d;
 }
 const statusOf = v => v === undefined || v === null || v === "" || isNaN(v) ? null : (v >= CFG.min && v <= CFG.max);
-const pointOf = (rd, date) => rd.byDay ? (rd.byDay[DAYS_TH[new Date(date + "T00:00:00").getDay()]] || "") : (rd.point || "");
+// checkpoints of one reading on a date: a day can list several separate places ("ER / OR" = ER and OR), each with its own value
+function checkpoints(rd, date){
+  if (!rd.byDay) return [{ key: rd.id, point: rd.point || "" }];
+  const p = rd.byDay[DAYS_TH[new Date(date + "T00:00:00").getDay()]];
+  return (Array.isArray(p) ? p : p ? [p] : []).map((point, i) => ({ key: rd.id + "#" + i, point }));
+}
 const daysIn = month => { const [y, m] = month.split("-").map(Number); return new Date(y, m, 0).getDate(); };
 const dayList = month => Array.from({ length: daysIn(month) }, (_, i) => `${month}-${String(i + 1).padStart(2, "0")}`);
 const valOf = (date, b, id) => state.data?.values?.[date]?.[b]?.[id];
@@ -141,12 +150,14 @@ function stats(){
   const days = dayList(state.month);
   const perB = CFG.buildings.map(b => {
     let rec = 0, ok = 0, bad = 0, sum = 0; const byRd = {};
-    days.forEach(d => b.readings.forEach(rd => {
-      const x = valOf(d, b.key, rd.id); if (!x) return;
+    let plan = 0;
+    days.forEach(d => b.readings.forEach(rd => checkpoints(rd, d).forEach(cp => {
+      plan++;
+      const x = valOf(d, b.key, cp.key); if (!x) return;
       rec++; sum += x.v; const s = statusOf(x.v); s ? ok++ : bad++;
       const a = byRd[rd.id] || (byRd[rd.id] = { n: 0, sum: 0 }); a.n++; a.sum += x.v;
-    }));
-    return { b, plan: days.length * b.readings.length, rec, ok, bad, avg: rec ? sum / rec : null, rate: rec ? ok / rec : null, byRd };
+    })));
+    return { b, plan, rec, ok, bad, avg: rec ? sum / rec : null, rate: rec ? ok / rec : null, byRd };
   });
   const T = perB.reduce((t, x) => ({ plan: t.plan + x.plan, rec: t.rec + x.rec, ok: t.ok + x.ok, bad: t.bad + x.bad, sum: t.sum + (x.avg ?? 0) * x.rec }), { plan: 0, rec: 0, ok: 0, bad: 0, sum: 0 });
   T.rate = T.rec ? T.ok / T.rec : null; T.avg = T.rec ? T.sum / T.rec : null;
@@ -176,11 +187,17 @@ function dashBody(forPdf){
       const wd = DAYS_TH[new Date(d + "T00:00:00").getDay()];
       let anyBad = false;
       const cells = b.readings.map(rd => {
-        const x = valOf(d, b.key, rd.id), s = x ? statusOf(x.v) : null; if (s === false) anyBad = true;
-        const pt = rd.byDay ? `<small>${esc(pointOf(rd, d))}</small>` : "";
-        return x ? `<td class="num ${s ? "ok" : "bad"}" title="${esc(x.by)}">${fmt(x.v)}${pt}</td>` : `<td class="none">${d > today ? "" : "–"}${pt}</td>`;
+        const cps = checkpoints(rd, d);
+        if (!rd.byDay){
+          const x = valOf(d, b.key, cps[0].key), s = x ? statusOf(x.v) : null; if (s === false) anyBad = true;
+          return x ? `<td class="num ${s ? "ok" : "bad"}" title="${esc(x.by)}">${fmt(x.v)}</td>` : `<td class="none">${d > today ? "" : "–"}</td>`;
+        }
+        return `<td class="cps">${cps.map(cp => {
+          const x = valOf(d, b.key, cp.key), s = x ? statusOf(x.v) : null; if (s === false) anyBad = true;
+          return `<div class="cp ${s === true ? "ok" : s === false ? "bad" : ""}"><span>${esc(cp.point)}</span><b>${x ? fmt(x.v) : d > today ? "" : "–"}</b></div>`;
+        }).join("")}</td>`;
       }).join("");
-      const by = [...new Set(b.readings.map(rd => valOf(d, b.key, rd.id)?.by).filter(Boolean))].join(", ");
+      const by = [...new Set(b.readings.flatMap(rd => checkpoints(rd, d).map(cp => valOf(d, b.key, cp.key)?.by)).filter(Boolean))].join(", ");
       return `<tr class="${d > today ? "off" : ""}"><td class="num">${Number(d.slice(8))}</td><td class="${wd === "เสาร์" || wd === "อาทิตย์" ? "we" : ""}">${wd}</td>${cells}<td class="l">${esc(by)}${anyBad ? `<small style="color:var(--bad)">⚠️ ค่าตกเกณฑ์: ตรวจสอบปั๊มฟีดคลอรีนด่วน</small>` : ""}</td></tr>`;
     }).join("");
     const avgRow = `<tr><th colspan="2">ค่าเฉลี่ย</th>${b.readings.map(rd => { const a = st.byRd[rd.id]; return `<th>${a ? fmt(a.sum / a.n) : "–"}</th>`; }).join("")}<th></th></tr>`;
@@ -210,7 +227,7 @@ function renderForm(){
       <div class="field"><label for="date">วันที่ตรวจ</label><input type="date" id="date" value="${state.date}" max="${bkk()}"></div>
       <span class="live" id="live"></span>
     </div>
-    ${CFG.buildings.map(b => `<div class="card"><h2>${esc(b.name)}</h2><div class="rows">${b.readings.map(rd => rowHtml(b, rd)).join("")}</div></div>`).join("")}
+    ${CFG.buildings.map(b => `<div class="card"><h2>${esc(b.name)}</h2><div class="rows">${b.readings.flatMap(rd => checkpoints(rd, state.date).map(cp => rowHtml(b, rd, cp))).join("")}</div></div>`).join("")}
     <p class="note">กรอกเฉพาะตัวเลขค่าคลอรีนที่วัดได้ (${esc(CFG.unit)}) เกณฑ์ปกติ ${CFG.min.toFixed(2)} - ${CFG.max.toFixed(2)} · ช่องที่ลบให้ว่างแล้วบันทึก = ลบค่าที่เคยกรอก</p>`;
   $("tech").onchange = () => { try { localStorage.setItem("cl-tech", $("tech").value.trim()); } catch (e) {} };
   $("date").onchange = () => {
@@ -220,13 +237,13 @@ function renderForm(){
   };
   renderSavebar();
 }
-function rowHtml(b, rd){
-  const k = b.key + "|" + rd.id, saved = valOf(state.date, b.key, rd.id);
+function rowHtml(b, rd, cp){
+  const k = b.key + "|" + cp.key, saved = valOf(state.date, b.key, cp.key);
   const v = k in state.pending ? state.pending[k] : saved?.v;
   const s = statusOf(v === "" ? null : v);
-  const pt = pointOf(rd, state.date);
-  return `<div class="row ${s === true ? "ok" : s === false ? "bad" : ""}" id="row-${k.replace("|","-")}">
-    <div><div class="nm">${esc(rd.label)}</div>${pt ? `<div class="pt">จุดตรวจ: ${esc(pt)}</div>` : ""}${saved ? `<div class="by">บันทึกแล้วโดย ${esc(saved.by)}</div>` : ""}</div>
+  const pt = cp.point;
+  return `<div class="row ${s === true ? "ok" : s === false ? "bad" : ""}" id="row-${k.replace(/[|#]/g,"-")}">
+    <div><div class="nm">${esc(rd.label)}${rd.byDay && pt ? " · " + esc(pt) : ""}</div>${pt && !rd.byDay ? `<div class="pt">จุดตรวจ: ${esc(pt)}</div>` : ""}${saved ? `<div class="by">บันทึกแล้วโดย ${esc(saved.by)}</div>` : ""}</div>
     <div class="numin"><input inputmode="decimal" data-k="${k}" value="${v === undefined || v === "" ? "" : v}" placeholder="0.00" aria-label="${esc(rd.label)}"><span>${esc(CFG.unit)}</span></div>
     <span class="badge ${s === true ? "ok" : s === false ? "bad" : "idle"}">${s === true ? "ปกติ" : s === false ? "ตกเกณฑ์" : "ยังไม่วัด"}</span>
     ${s === false ? `<div class="warnline">⚠️ ค่าตกเกณฑ์: ตรวจสอบปั๊มฟีดคลอรีนด่วน</div>` : ""}
