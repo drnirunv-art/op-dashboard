@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ระบบบันทึกค่าคลอรีน</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+:root{
+  --bg:#f3f6f7; --panel:#ffffff; --fg:#14262c; --muted:#5b6f76; --line:#d6e0e3;
+  --accent:#0f7c9c; --accent-ink:#ffffff; --head:#ffe600; --head-ink:#1d1d00;
+  --ok:#92D050; --ok-ink:#173d00; --bad:#FF0000; --bad-ink:#ffffff; --none:#e6ecee; --none-ink:#6a7c82; --warn:#FFE082; --warn-ink:#3d2e00;
+  --field:#fffbe0; --shadow:0 10px 30px rgba(20,38,44,.10);
+  --f-body:"IBM Plex Sans Thai",system-ui,"Leelawadee UI",Tahoma,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0e1719; --panel:#162326; --fg:#e4eef0; --muted:#94a9af; --line:#2a3b3f;
+  --accent:#3fb3d3; --accent-ink:#04212a; --head:#d9c400; --none:#22333a; --none-ink:#94a9af; --field:#1f2d30;
+  --shadow:0 10px 30px rgba(0,0,0,.4); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1719; --panel:#162326; --fg:#e4eef0; --muted:#94a9af; --line:#2a3b3f;
+  --accent:#3fb3d3; --accent-ink:#04212a; --head:#d9c400; --none:#22333a; --none-ink:#94a9af; --field:#1f2d30;
+  --shadow:0 10px 30px rgba(0,0,0,.4); color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.45}
+button,input,select{font:inherit;color:inherit}
+.wrap{max-width:1200px;margin:0 auto;padding:16px 16px 110px}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:12px 18px;margin-bottom:14px}
+header img{width:84px;height:56px;object-fit:cover;border-radius:8px}
+header h1{margin:0;font-size:clamp(1.15rem,2.6vw,1.6rem)}
+header p{margin:0;color:var(--muted);font-size:13px}
+.tabs{display:flex;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px;margin-left:auto}
+.tabs button{border:0;background:none;padding:8px 14px;border-radius:9px;font-weight:600;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
+.ctrl{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 14px}
+.ctrl label{font-weight:600}
+.ctrl input{border:1px solid var(--line);background:var(--panel);border-radius:9px;padding:7px 10px}
+.ctrl .live{color:var(--muted);font-size:13px}
+.card{background:var(--panel);border-radius:12px;box-shadow:var(--shadow);padding:16px;margin-bottom:14px}
+.card h2{margin:0 0 10px;font-size:1.05rem}
+.card-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin-bottom:10px}
+.card-head h2{margin:0}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:8px 16px;font-weight:600;cursor:pointer}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn:disabled{opacity:.6;cursor:progress}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:14px}
+.kpi{background:var(--panel);border-radius:12px;box-shadow:var(--shadow);padding:12px 14px}
+.kpi b{display:block;font-size:1.6rem;font-family:var(--f-mono)}
+.kpi span{color:var(--muted);font-size:13px}
+.kpi small{display:block;color:var(--muted);font-size:12px}
+.tscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:100%}
+th,td{border:1px solid var(--line);padding:6px 8px;text-align:center;font-size:13.5px}
+th{background:var(--head);color:var(--head-ink);font-weight:600}
+td.l,th.l{text-align:left}
+td.num{font-family:var(--f-mono)}
+td.ok{background:var(--ok);color:var(--ok-ink)} td.bad{background:var(--bad);color:var(--bad-ink)}
+td.none{color:var(--none-ink)} td.we{color:var(--accent)}
+tr.off td{opacity:.45}
+td small{display:block;font-size:11px;opacity:.85;font-family:var(--f-body)}
+.note{color:var(--muted);font-size:13px;margin:8px 0 0}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--muted);margin:0 0 10px}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:6px;background:var(--c)}
+/* form */
+.field{display:flex;flex-direction:column;gap:4px}
+.field input{border:1px solid var(--line);background:var(--field);border-radius:9px;padding:9px 11px;min-width:220px}
+.rows{display:grid;gap:8px}
+.row{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.row.ok{border-color:var(--ok);box-shadow:inset 4px 0 0 var(--ok)} .row.bad{border-color:var(--bad);box-shadow:inset 4px 0 0 var(--bad)}
+.row .nm{font-weight:600} .row .pt{color:var(--muted);font-size:13px} .row .by{color:var(--muted);font-size:12px}
+.numin{display:flex;align-items:center;gap:6px}
+.numin input{width:96px;border:1px solid var(--line);background:var(--field);border-radius:9px;padding:9px 10px;font-family:var(--f-mono);text-align:right}
+.badge{font-size:12px;font-weight:600;border-radius:999px;padding:3px 10px;white-space:nowrap}
+.badge.ok{background:var(--ok);color:var(--ok-ink)} .badge.bad{background:var(--bad);color:var(--bad-ink)} .badge.idle{background:var(--none);color:var(--none-ink)}
+.warnline{grid-column:1/-1;color:var(--bad);font-size:13px;font-weight:600}
+.savebar{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding:10px 16px;display:flex;gap:12px;align-items:center;justify-content:flex-end;flex-wrap:wrap;z-index:5}
+.savebar[hidden]{display:none}
+.savebar .msg{margin-right:auto;font-size:14px}
+.msg.ok{color:#2e7d32} .msg.bad{color:var(--bad)}
+.state{padding:40px 8px;text-align:center;color:var(--muted)}
+.pick{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.pick a{display:block;background:var(--panel);border-radius:12px;box-shadow:var(--shadow);padding:16px;color:inherit;text-decoration:none}
+.pick a b{display:block;font-size:1.1rem}
+@media (max-width:560px){ .row{grid-template-columns:1fr auto} .row .badge{grid-column:2} .tabs{margin-left:0} }
+/* PDF copy: always light so it prints cleanly */
+#report-pdf{--panel:#fff;--fg:#111;--muted:#555;--line:#bbb;--head:#ffe600;--head-ink:#1d1d00;--none-ink:#777;background:#fff;color:#111;font-family:var(--f-body)}
+#report-pdf h1{font-size:19px;margin:0 0 2px} #report-pdf .sub{color:#555;font-size:12.5px;margin:0 0 10px}
+#report-pdf .kpis{grid-template-columns:repeat(5,1fr)} #report-pdf .kpi{box-shadow:none;border:1px solid #bbb;padding:8px 10px}
+#report-pdf .kpi b{font-size:1.25rem} #report-pdf .card{box-shadow:none;border:1px solid #ddd;padding:10px}
+#report-pdf td,#report-pdf th{font-size:11px;padding:3px 4px}
+#report-pdf tr{break-inside:avoid}
+#report-pdf .sign{display:flex;justify-content:space-between;gap:40px;margin-top:30px;font-size:12px}
+#report-pdf .sign div{flex:1;text-align:center;border-top:1px dotted #555;padding-top:6px}
+#report-pdf *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><p class="state">กำลังโหลด…</p></div>
+<div class="savebar" id="savebar" hidden>
+  <span class="msg" id="msg"></span>
+  <button class="btn" id="discard" type="button">ยกเลิก</button>
+  <button class="btn primary" id="save" type="button">บันทึก</button>
+</div>
+
+<script>
+// LINE's in-app browser cannot save files, so ask LINE to reopen the page in Chrome/Safari (once; the flag stops a loop)
+const IN_LINE = / Line\//i.test(navigator.userAgent);
+if (IN_LINE && !new URLSearchParams(location.search).has("openExternalBrowser")) {
+  const u = new URL(location.href); u.searchParams.set("openExternalBrowser", "1"); location.replace(u.toString());
+}
+const API_URL = "https://script.google.com/macros/s/AKfycbxdSNR2JlNtvC4mLJ5r8b7qydukGawHV-Hy8QU0THH-No5UK5TFh9ICONBe6qMt0QaH/exec";
+const HOSPITALS = [{ key: "pt1", name: "โรงพยาบาลพญาไท 1" }, { key: "pt2", name: "โรงพยาบาลพญาไท 2" }];
+const Q = new URLSearchParams(location.search);
+const H = (Q.get("h") || "").toLowerCase();
+const DAYS_TH = ["อาทิตย์","จันทร์","อังคาร","พุธ","พฤหัสบดี","ศุกร์","เสาร์"];
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const bkk = () => new Date(Date.now() + 7*3600e3).toISOString().slice(0,10);
+const fmt = v => v === undefined || v === null || v === "" ? "" : (Math.round(v * 100) / 100).toFixed(2);
+let state = { mode: Q.get("page") === "form" ? "form" : "dash", month: bkk().slice(0,7), date: bkk(), data: null, pending: {} };
+let CFG = null;
+
+async function apiGet(month){
+  const r = await fetch(API_URL + "?" + new URLSearchParams({ api: "clGet", h: H, month }), { credentials: "omit" });
+  const d = await r.json(); if (d.error) throw new Error(d.error); return d;
+}
+async function apiSave(date, by, changes){
+  const r = await fetch(API_URL, { method: "POST", credentials: "omit", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ fn: "clSave", h: H, date, by, changes }) });
+  const d = await r.json(); if (d.error) throw new Error(d.error); return d;
+}
+const statusOf = v => v === undefined || v === null || v === "" || isNaN(v) ? null : (v >= CFG.min && v <= CFG.max);
+const pointOf = (rd, date) => rd.byDay ? (rd.byDay[DAYS_TH[new Date(date + "T00:00:00").getDay()]] || "") : (rd.point || "");
+const daysIn = month => { const [y, m] = month.split("-").map(Number); return new Date(y, m, 0).getDate(); };
+const dayList = month => Array.from({ length: daysIn(month) }, (_, i) => `${month}-${String(i + 1).padStart(2, "0")}`);
+const valOf = (date, b, id) => state.data?.values?.[date]?.[b]?.[id];
+
+// ---------- monthly numbers (same rules as the Excel Dashboard) ----------
+function stats(){
+  const days = dayList(state.month);
+  const perB = CFG.buildings.map(b => {
+    let rec = 0, ok = 0, bad = 0, sum = 0; const byRd = {};
+    days.forEach(d => b.readings.forEach(rd => {
+      const x = valOf(d, b.key, rd.id); if (!x) return;
+      rec++; sum += x.v; const s = statusOf(x.v); s ? ok++ : bad++;
+      const a = byRd[rd.id] || (byRd[rd.id] = { n: 0, sum: 0 }); a.n++; a.sum += x.v;
+    }));
+    return { b, plan: days.length * b.readings.length, rec, ok, bad, avg: rec ? sum / rec : null, rate: rec ? ok / rec : null, byRd };
+  });
+  const T = perB.reduce((t, x) => ({ plan: t.plan + x.plan, rec: t.rec + x.rec, ok: t.ok + x.ok, bad: t.bad + x.bad, sum: t.sum + (x.avg ?? 0) * x.rec }), { plan: 0, rec: 0, ok: 0, bad: 0, sum: 0 });
+  T.rate = T.rec ? T.ok / T.rec : null; T.avg = T.rec ? T.sum / T.rec : null;
+  return { perB, T };
+}
+const level = r => r === null ? "—" : r >= 0.95 ? "🟢 ผ่านเกณฑ์ดีเยี่ยม" : r >= 0.85 ? "🟡 เฝ้าระวัง/มีตกเกณฑ์" : "🔴 วิกฤต/ต้องแก้ไขด่วน";
+const pct = r => r === null ? "–" : (r * 100).toFixed(1) + "%";
+const thMonth = m => new Date(m + "-01T00:00:00").toLocaleDateString("th-TH", { month: "long", year: "numeric" });
+
+function dashBody(forPdf){
+  const { perB, T } = stats();
+  const kpis = `<div class="kpis">
+    <div class="kpi"><b>${pct(T.rate)}</b><span>อัตราผ่านเกณฑ์รวม</span><small>เป้าหมาย ≥ 95.0%</small></div>
+    <div class="kpi"><b>${T.rec}/${T.plan}</b><span>จุดตรวจที่บันทึกแล้ว</span><small>${daysIn(state.month)} วัน</small></div>
+    <div class="kpi"><b>${T.bad}</b><span>จุดที่ตกเกณฑ์ (Alerts)</span><small>&lt; ${CFG.min} หรือ &gt; ${CFG.max} ${esc(CFG.unit)}</small></div>
+    <div class="kpi"><b>${T.avg === null ? "–" : fmt(T.avg)}</b><span>ค่าคลอรีนเฉลี่ยรวม (${esc(CFG.unit)})</span><small>เกณฑ์ ${CFG.min.toFixed(2)} - ${CFG.max.toFixed(2)}</small></div>
+    <div class="kpi"><b style="font-size:1.1rem;font-family:var(--f-body)">${T.rate === null ? "ยังไม่มีข้อมูล" : T.rate >= 0.95 ? "🟢 ปลอดภัยสูง" : "🟡 เฝ้าระวัง"}</b><span>สถานะภาพรวมคุณภาพน้ำ</span></div>
+  </div>`;
+  const matrix = `<div class="card"><h2>ตารางสรุปผลแยกตามอาคาร</h2><div class="tscroll"><table>
+    <thead><tr><th class="l">อาคาร</th><th>แผนตรวจ (จุด)</th><th>บันทึกแล้ว</th><th>ผ่านเกณฑ์</th><th>ตกเกณฑ์</th><th>ค่าเฉลี่ย (${esc(CFG.unit)})</th><th>อัตราผ่าน</th><th class="l">ระดับการประเมิน</th></tr></thead>
+    <tbody>${perB.map(x => `<tr><td class="l">${esc(x.b.name)}</td><td class="num">${x.plan}</td><td class="num">${x.rec}</td><td class="num">${x.ok}</td><td class="num ${x.bad ? "bad" : ""}">${x.bad}</td><td class="num">${x.avg === null ? "–" : fmt(x.avg)}</td><td class="num">${pct(x.rate)}</td><td class="l">${level(x.rate)}</td></tr>`).join("")}
+      <tr><th class="l">รวมทุกอาคาร</th><th>${T.plan}</th><th>${T.rec}</th><th>${T.ok}</th><th>${T.bad}</th><th>${T.avg === null ? "–" : fmt(T.avg)}</th><th>${pct(T.rate)}</th><th class="l">${T.rate === null ? "—" : T.rate >= 0.95 ? "🟢 ภาพรวมปกติ" : "🟡 เฝ้าระวัง"}</th></tr></tbody></table></div></div>`;
+  const today = bkk();
+  const daily = CFG.buildings.map(b => {
+    const st = perB.find(x => x.b.key === b.key);
+    const rows = dayList(state.month).map(d => {
+      const wd = DAYS_TH[new Date(d + "T00:00:00").getDay()];
+      let anyBad = false;
+      const cells = b.readings.map(rd => {
+        const x = valOf(d, b.key, rd.id), s = x ? statusOf(x.v) : null; if (s === false) anyBad = true;
+        const pt = rd.byDay ? `<small>${esc(pointOf(rd, d))}</small>` : "";
+        return x ? `<td class="num ${s ? "ok" : "bad"}" title="${esc(x.by)}">${fmt(x.v)}${pt}</td>` : `<td class="none">${d > today ? "" : "–"}${pt}</td>`;
+      }).join("");
+      const by = [...new Set(b.readings.map(rd => valOf(d, b.key, rd.id)?.by).filter(Boolean))].join(", ");
+      return `<tr class="${d > today ? "off" : ""}"><td class="num">${Number(d.slice(8))}</td><td class="${wd === "เสาร์" || wd === "อาทิตย์" ? "we" : ""}">${wd}</td>${cells}<td class="l">${esc(by)}${anyBad ? `<small style="color:var(--bad)">⚠️ ค่าตกเกณฑ์: ตรวจสอบปั๊มฟีดคลอรีนด่วน</small>` : ""}</td></tr>`;
+    }).join("");
+    const avgRow = `<tr><th colspan="2">ค่าเฉลี่ย</th>${b.readings.map(rd => { const a = st.byRd[rd.id]; return `<th>${a ? fmt(a.sum / a.n) : "–"}</th>`; }).join("")}<th></th></tr>`;
+    return `<div class="card" ${forPdf ? 'style="break-before:page"' : ""}><h2>${esc(b.name)} · ${thMonth(state.month)}</h2>
+      <div class="tscroll"><table><thead><tr><th>วันที่</th><th>วัน</th>${b.readings.map(rd => `<th>${esc(rd.label)}${rd.point ? `<br><small>${esc(rd.point)}</small>` : ""}</th>`).join("")}<th class="l">ผู้ตรวจวัด / หมายเหตุ</th></tr></thead>
+      <tbody>${rows}${avgRow}</tbody></table></div></div>`;
+  }).join("");
+  return kpis + matrix + daily;
+}
+
+function renderDash(){
+  $("view").innerHTML = `
+    <div class="ctrl"><label for="month">เดือน</label><input type="month" id="month" value="${state.month}">
+      <button class="btn" id="pdf" type="button">บันทึกรายงาน PDF</button><span class="live" id="live"></span></div>
+    <div class="legend"><span><i style="--c:var(--ok)"></i>ปกติ (${CFG.min.toFixed(2)} - ${CFG.max.toFixed(2)} ${esc(CFG.unit)})</span><span><i style="--c:var(--bad)"></i>ตกเกณฑ์</span><span>– ยังไม่บันทึก</span></div>
+    <div id="dash">${dashBody(false)}</div>`;
+  $("month").onchange = () => { if ($("month").value){ state.month = $("month").value; load(); } };
+  $("pdf").onclick = pdfClick;
+}
+
+// ---------- technician form ----------
+function renderForm(){
+  let tech = ""; try { tech = localStorage.getItem("cl-tech") || ""; } catch (e) {}
+  $("view").innerHTML = `
+    <div class="ctrl">
+      <div class="field"><label for="tech">ชื่อผู้ตรวจวัด</label><input id="tech" value="${esc(tech)}" placeholder="เช่น สมชาย ใจดี" autocomplete="name"></div>
+      <div class="field"><label for="date">วันที่ตรวจ</label><input type="date" id="date" value="${state.date}" max="${bkk()}"></div>
+      <span class="live" id="live"></span>
+    </div>
+    ${CFG.buildings.map(b => `<div class="card"><h2>${esc(b.name)}</h2><div class="rows">${b.readings.map(rd => rowHtml(b, rd)).join("")}</div></div>`).join("")}
+    <p class="note">กรอกเฉพาะตัวเลขค่าคลอรีนที่วัดได้ (${esc(CFG.unit)}) เกณฑ์ปกติ ${CFG.min.toFixed(2)} - ${CFG.max.toFixed(2)} · ช่องที่ลบให้ว่างแล้วบันทึก = ลบค่าที่เคยกรอก</p>`;
+  $("tech").onchange = () => { try { localStorage.setItem("cl-tech", $("tech").value.trim()); } catch (e) {} };
+  $("date").onchange = () => {
+    if (Object.keys(state.pending).length){ setMsg("บันทึกหรือยกเลิกค่าที่ค้างอยู่ก่อนเปลี่ยนวันที่", "bad"); $("date").value = state.date; return; }
+    state.date = $("date").value || bkk();
+    if (state.date.slice(0,7) !== state.month){ state.month = state.date.slice(0,7); load(); } else renderForm();
+  };
+  renderSavebar();
+}
+function rowHtml(b, rd){
+  const k = b.key + "|" + rd.id, saved = valOf(state.date, b.key, rd.id);
+  const v = k in state.pending ? state.pending[k] : saved?.v;
+  const s = statusOf(v === "" ? null : v);
+  const pt = pointOf(rd, state.date);
+  return `<div class="row ${s === true ? "ok" : s === false ? "bad" : ""}" id="row-${k.replace("|","-")}">
+    <div><div class="nm">${esc(rd.label)}</div>${pt ? `<div class="pt">จุดตรวจ: ${esc(pt)}</div>` : ""}${saved ? `<div class="by">บันทึกแล้วโดย ${esc(saved.by)}</div>` : ""}</div>
+    <div class="numin"><input inputmode="decimal" data-k="${k}" value="${v === undefined || v === "" ? "" : v}" placeholder="0.00" aria-label="${esc(rd.label)}"><span>${esc(CFG.unit)}</span></div>
+    <span class="badge ${s === true ? "ok" : s === false ? "bad" : "idle"}">${s === true ? "ปกติ" : s === false ? "ตกเกณฑ์" : "ยังไม่วัด"}</span>
+    ${s === false ? `<div class="warnline">⚠️ ค่าตกเกณฑ์: ตรวจสอบปั๊มฟีดคลอรีนด่วน</div>` : ""}
+  </div>`;
+}
+document.addEventListener("input", e => {
+  const inp = e.target.closest("input[data-k]"); if (!inp) return;
+  const t = inp.value.trim().replace(",", ".");
+  if (t !== "" && isNaN(Number(t))) return;
+  const [b, id] = inp.dataset.k.split("|");
+  const saved = valOf(state.date, b, id)?.v;
+  const v = t === "" ? "" : Number(t);
+  if (v === saved || (v === "" && saved === undefined)) delete state.pending[inp.dataset.k]; else state.pending[inp.dataset.k] = v;
+  const row = inp.closest(".row"), s = statusOf(v === "" ? null : v);
+  row.className = "row " + (s === true ? "ok" : s === false ? "bad" : "");
+  row.querySelector(".badge").className = "badge " + (s === true ? "ok" : s === false ? "bad" : "idle");
+  row.querySelector(".badge").textContent = s === true ? "ปกติ" : s === false ? "ตกเกณฑ์" : "ยังไม่วัด";
+  row.querySelector(".warnline")?.remove();
+  if (s === false) row.insertAdjacentHTML("beforeend", `<div class="warnline">⚠️ ค่าตกเกณฑ์: ตรวจสอบปั๊มฟีดคลอรีนด่วน</div>`);
+  renderSavebar();
+});
+function setMsg(t, k){ $("msg").textContent = t; $("msg").className = "msg " + (k || ""); }
+function renderSavebar(){
+  const n = Object.keys(state.pending).length;
+  $("savebar").hidden = state.mode !== "form";
+  if (state.mode === "form" && n) setMsg(`มี ${n} ค่าที่ยังไม่บันทึก · วันที่ ${state.date}`, "");
+  $("save").disabled = !n; $("discard").disabled = !n;
+}
+$("discard").onclick = () => { state.pending = {}; renderForm(); };
+$("save").onclick = async () => {
+  const by = $("tech").value.trim();
+  if (!by){ $("tech").focus(); setMsg("กรุณาใส่ชื่อผู้ตรวจวัดก่อนบันทึก", "bad"); return; }
+  try { localStorage.setItem("cl-tech", by); } catch (e) {}
+  $("save").disabled = true; $("save").textContent = "กำลังบันทึก…";
+  try {
+    state.data = await apiSave(state.date, by, state.pending);
+    state.pending = {}; renderForm(); setMsg("บันทึกแล้ว " + new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }), "ok");
+  } catch (e){ setMsg("บันทึกไม่สำเร็จ: " + e.message, "bad"); }
+  finally { $("save").textContent = "บันทึก"; renderSavebar(); }
+};
+window.addEventListener("beforeunload", e => { if (Object.keys(state.pending).length){ e.preventDefault(); e.returnValue = ""; } });
+
+// ---------- PDF (same save pattern as the inspection dashboards) ----------
+const IS_MOBILE = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+let readyPdf = null;
+function savePdf(file){
+  const url = URL.createObjectURL(file); const a = document.createElement("a"); a.href = url; a.download = file.name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000);
+  $("live").textContent = "บันทึกไฟล์ " + file.name;
+}
+async function sharePdf(file){ try { await navigator.share({ files: [file], title: file.name }); } catch (e) { if (e.name !== "AbortError") savePdf(file); } }
+async function pdfClick(){
+  const btn = $("pdf");
+  if (readyPdf && readyPdf.month === state.month){ const f = readyPdf.file; readyPdf = null; btn.textContent = "บันทึกรายงาน PDF"; return sharePdf(f); }
+  readyPdf = null; btn.disabled = true; btn.textContent = "กำลังสร้าง PDF…";
+  const filename = `รายงานคลอรีน_${H.toUpperCase()}_${state.month}.pdf`;
+  const sx = window.scrollX, sy = window.scrollY; window.scrollTo(0, 0);
+  let file = null;
+  try {
+    if (!window.html2pdf) await new Promise((ok, no) => { const s = document.createElement("script"); s.src = ["https:", "", "cdnjs.cloudflare.com"].join("/") + "/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
+    const el = document.createElement("div"); el.id = "report-pdf"; el.style.width = "740px";
+    el.innerHTML = `<h1>รายงานผลตรวจวัดค่าคลอรีนประจำเดือน · ${esc(CFG.name)}</h1>
+      <p class="sub">ประจำเดือน ${thMonth(state.month)} · เกณฑ์ ${CFG.min.toFixed(2)} - ${CFG.max.toFixed(2)} ${esc(CFG.unit)} · ${esc(CFG.doc || "")} · พิมพ์เมื่อ ${new Date().toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short" })}</p>
+      ${dashBody(true)}<div class="sign"><div>ผู้ตรวจวัด</div><div>หัวหน้างาน</div><div>ผู้อนุมัติ</div></div>`;
+    const blob = await html2pdf().set({
+      margin: [8, 8, 8, 8], filename, image: { type: "jpeg", quality: 0.92 },
+      html2canvas: { scale: IS_MOBILE ? 1.3 : 1.6, backgroundColor: "#ffffff", scrollX: 0, scrollY: 0 },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      pagebreak: { mode: ["css", "legacy"], avoid: ["tr", ".kpis", ".sign"] }
+    }).from(el).outputPdf("blob");
+    file = new File([blob], filename, { type: "application/pdf" });
+  } catch (e) { $("live").textContent = "สร้าง PDF ไม่สำเร็จ ลองใหม่อีกครั้ง"; }
+  finally { window.scrollTo(sx, sy); btn.disabled = false; btn.textContent = "บันทึกรายงาน PDF"; }
+  if (!file) return;
+  if (IS_MOBILE && navigator.canShare && navigator.canShare({ files: [file] })){ readyPdf = { file, month: state.month }; btn.textContent = "แตะอีกครั้งเพื่อบันทึก / แชร์ PDF"; }
+  else if (IN_LINE) $("live").textContent = "LINE บันทึกไฟล์ไม่ได้ กด ⋮ แล้วเลือก เปิดในเบราว์เซอร์อื่น";
+  else savePdf(file);
+}
+
+// ---------- shell ----------
+function shell(){
+  const link = p => { const u = new URL(location.href); u.searchParams.set("h", H); p ? u.searchParams.set("page", p) : u.searchParams.delete("page"); return u.pathname + u.search; };
+  $("app").innerHTML = `<header>
+      ${CFG.photo ? `<img src="${esc(CFG.photo)}" alt="">` : ""}
+      <div><h1>ระบบบันทึกค่าคลอรีน · ${esc(CFG.name)}</h1><p>${esc(CFG.sub || "")} · เกณฑ์ ${CFG.min.toFixed(2)} - ${CFG.max.toFixed(2)} ${esc(CFG.unit)}</p></div>
+      <nav class="tabs"><button id="tab-dash" aria-selected="${state.mode === "dash"}">แดชบอร์ด</button><button id="tab-form" aria-selected="${state.mode === "form"}">กรอกค่าคลอรีน</button></nav>
+    </header><div id="view"></div>`;
+  document.title = (state.mode === "form" ? "กรอกค่าคลอรีน · " : "แดชบอร์ดคลอรีน · ") + CFG.name;
+  $("tab-dash").onclick = () => { state.mode = "dash"; history.replaceState(null, "", link("")); shell(); };
+  $("tab-form").onclick = () => { state.mode = "form"; state.date = bkk(); history.replaceState(null, "", link("form")); if (state.month !== bkk().slice(0,7)){ state.month = bkk().slice(0,7); load(); } else shell(); };
+  state.mode === "form" ? renderForm() : renderDash();
+  renderSavebar();
+}
+async function load(){
+  try {
+    if ($("live")) $("live").textContent = "กำลังโหลด…";
+    const d = await apiGet(state.month);
+    state.data = d; CFG = d.config; shell();
+    $("live").textContent = "อัปเดต " + new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
+  } catch (e) { $("app").innerHTML = `<p class="state">โหลดข้อมูลไม่ได้: ${esc(e.message)}</p>`; }
+}
+if (!H){
+  document.title = "ระบบบันทึกค่าคลอรีน";
+  $("app").innerHTML = `<header><div><h1>ระบบบันทึกค่าคลอรีน</h1><p>เลือกโรงพยาบาล</p></div></header><div class="pick">${HOSPITALS.map(h => `<a href="?h=${h.key}"><b>${esc(h.name)}</b>แดชบอร์ด · <span style="color:var(--accent)">กรอกค่า: ?h=${h.key}&page=form</span></a>`).join("")}</div>`;
+} else load();
+</script>
+</body>
+</html>
