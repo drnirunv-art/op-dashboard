@@ -98,6 +98,54 @@ const joinUrl = (g, em) => groupPage(g) + "?authuser=" + encodeURIComponent(em);
 const teamLink = token => PAGE_URL + "#t=" + token;
 const remember = { get(){ try { return localStorage.getItem("eb_me") || ""; } catch { return ""; } }, set(v){ try { localStorage.setItem("eb_me", v); } catch {} } };
 let DATA = null, dirty = false;
+const draft = {
+  get(){ try { return JSON.parse(localStorage.getItem("gm_draft") || "{}"); } catch { return {}; } },
+  set(v){ try { localStorage.setItem("gm_draft", JSON.stringify(v)); } catch {} },
+  clear(){ try { localStorage.removeItem("gm_draft"); } catch {} }
+};
+const PREFIX_RE = /^[a-z0-9][a-z0-9_-]{2,62}$/;
+const slug = s => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+function claudePrompt(name, prefix){
+  return `ช่วยสร้าง Google Group ใหม่ให้หน่อยครับ โดยใช้เบราว์เซอร์ในแอป Claude บนคอมพิวเตอร์ของผม
+บัญชีที่ใช้สร้าง: dr.nirun.v@gmail.com (ถ้าเบราว์เซอร์ล็อกอินหลายบัญชี ให้เลือกบัญชีนี้ก่อน)
+เริ่มที่หน้า https://groups.google.com/my-groups?create-group=1
+
+ข้อมูลกลุ่ม
+- Group name: ${name}
+- Group email: ${prefix}@googlegroups.com
+- Group description: อีเมลกลุ่ม ${name} รับเมลจากภายนอกแล้วส่งต่อถึงลูกทีม
+
+ตั้งค่าความเป็นส่วนตัว
+- Who can search for group: Anyone on the web
+- Who can join group: Anyone can join
+- Who can view conversations: Group members
+- Who can post: Anyone on the web
+- Who can view members: Group members
+
+ไม่ต้องเพิ่มสมาชิก กรอกและตั้งค่าให้ครบจนถึงหน้าสุดท้าย แล้วหยุดรอให้ผมกด Create group และยืนยัน CAPTCHA เอง
+ถ้าชื่ออีเมลกลุ่มนี้ถูกใช้ไปแล้ว ให้หยุดแล้วบอกผมก่อน อย่าเปลี่ยนชื่อเอง
+หลังผมบอกว่าสร้างแล้ว ให้เปิดหน้า About ของกลุ่ม ตรวจว่าตั้งค่าตรงตามนี้ แล้วสรุปให้ผมฟัง
+ห้ามแตะกลุ่มอื่นหรือระบบอื่นที่ไม่เกี่ยวข้อง`;
+}
+function wizardState(){
+  const n = $("newName"), p = $("newPrefix");
+  if (!n || !p) return null;
+  return { name: n.value.trim(), prefix: p.value.trim().toLowerCase() };
+}
+function updateWizard(){
+  const s = wizardState(); if (!s) return;
+  draft.set(s);
+  const ok = s.name && PREFIX_RE.test(s.prefix);
+  const hint = $("prefixHint");
+  if (!s.prefix) hint.textContent = "อีเมลกลุ่มเป็นภาษาอังกฤษเท่านั้น เช่น ชื่อกลุ่ม \"จัดซื้อ\" ใช้ purchasing-t";
+  else if (!PREFIX_RE.test(s.prefix)) { hint.innerHTML = '<span style="color:var(--bad)">ใช้ได้เฉพาะ a-z, 0-9, ขีด - และ _ ยาว 3 ตัวขึ้นไป ห้ามมีจุดหรือเว้นวรรค</span>'; }
+  else hint.innerHTML = `อีเมลกลุ่มจะเป็น <b class="mono">${esc(s.prefix)}@googlegroups.com</b>`;
+  const a = $("askClaude");
+  a.href = ok ? "https://claude.ai/new?q=" + encodeURIComponent(claudePrompt(s.name, s.prefix)) : "#";
+  a.setAttribute("aria-disabled", ok ? "false" : "true");
+  a.style.opacity = ok ? "" : ".55";
+}
+
 
 async function apiGet(){
   const r = await fetch(API_URL + "?" + new URLSearchParams({ api: "ebGet", t: TOKEN }), { credentials: "omit" });
@@ -228,11 +276,31 @@ function renderAdmin(){
     <p class="lead">ลิงก์นี้สำหรับคุณคนเดียว ห้ามส่งต่อ · แต่ละกลุ่มมีลิงก์ลูกทีมของตัวเอง ลูกทีมกลุ่มหนึ่งจะไม่เห็นกลุ่มอื่น</p>
     <section class="card">
       <h2>เพิ่มกลุ่มใหม่</h2>
+      <p class="hint" style="margin:0 0 6px"><b>ขั้นที่ 1 ·</b> ตั้งชื่อกลุ่มและอีเมลกลุ่ม</p>
+      <div class="row" style="margin-top:0">
+        <div style="flex:1 1 200px;min-width:0"><label class="f" for="newName">ชื่อกลุ่ม</label><input type="text" id="newName" placeholder="เช่น จัดซื้อ" value="${esc(draft.get().name)}"></div>
+        <div style="flex:2 1 260px;min-width:0"><label class="f" for="newPrefix">อีเมลกลุ่ม (a-z, 0-9, ขีด - เท่านั้น ห้ามมีจุด)</label>
+          <div class="grow"><input type="text" id="newPrefix" class="mono" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="เช่น purchasing-t" value="${esc(draft.get().prefix)}" ${draft.get().prefix ? 'data-touched="1"' : ""}><span class="hint" style="margin:0;white-space:nowrap">@googlegroups.com</span></div>
+        </div>
+      </div>
+      <p class="hint" id="prefixHint"></p>
+      <div class="sep"></div>
+      <p class="hint" style="margin:0 0 6px"><b>ขั้นที่ 2 ·</b> สร้าง Google Group (เลือกทางใดทางหนึ่ง)</p>
+      <div class="row" style="margin-top:0">
+        <a class="btn primary" id="askClaude" href="#" target="_blank" rel="noopener">ให้ Claude สร้างกลุ่มให้</a>
+        <button class="btn" id="copyPrompt" type="button">คัดลอกข้อความสั่ง Claude</button>
+      </div>
+      <p class="hint">ทาง A · กดแล้วกด <b>ส่ง</b> ในแชท Claude ที่เปิดขึ้น · คอมพิวเตอร์ต้องเปิดแอป Claude ไว้ · สุดท้ายคุณกด Create group + ยืนยัน CAPTCHA ที่คอมพิวเตอร์เอง</p>
       <details class="howto">
-        <summary>ขั้นที่ 1 · สร้าง Google Group ก่อน (กดเพื่อดูวิธี)</summary>
+        <summary>ทาง B · สร้างเองทีละขั้น (กดเพื่อดู)</summary>
+        <div class="row">
+          <a class="btn" href="https://groups.google.com/my-groups?create-group=1" target="_blank" rel="noopener">เปิดหน้าสร้างกลุ่ม</a>
+          <button class="btn" id="copyName" type="button">คัดลอกชื่อกลุ่ม</button>
+          <button class="btn" id="copyPrefix" type="button">คัดลอกอีเมลกลุ่ม</button>
+        </div>
         <ol>
-          <li>เปิด <a href="https://groups.google.com/my-groups?create-group=1" target="_blank" rel="noopener">groups.google.com → Create group</a> ด้วยบัญชี dr.nirun.v@gmail.com</li>
-          <li>ตั้งชื่อกลุ่ม และอีเมลกลุ่ม (ใช้ตัวอักษร ตัวเลข และขีด - เท่านั้น ห้ามใส่จุด) แล้วกด Next</li>
+          <li>ตรวจว่ารูปโปรไฟล์มุมขวาบนเป็น <b>dr.nirun.v@gmail.com</b></li>
+          <li>วางชื่อกลุ่มในช่อง Group name และวางอีเมลกลุ่มในช่อง Group email → กด Next</li>
           <li>Who can search for group = <b>Anyone on the web</b></li>
           <li>Who can join group = <b>Anyone can join</b></li>
           <li>Who can view conversations = <b>Group members</b></li>
@@ -240,15 +308,13 @@ function renderAdmin(){
           <li>กด Next → ไม่ต้องใส่สมาชิก → กด Create group → ยืนยันว่าไม่ใช่โปรแกรมอัตโนมัติ</li>
         </ol>
       </details>
-      <p class="hint" style="margin-top:10px"><b>ขั้นที่ 2 ·</b> กรอกชื่อและอีเมลของกลุ่มที่สร้างแล้ว แล้วกดเพิ่มกลุ่ม จะได้ลิงก์สำหรับลูกทีมทันที</p>
-      <div class="row">
-        <div style="flex:1 1 200px;min-width:0"><label class="f" for="newName">ชื่อกลุ่ม</label><input type="text" id="newName" placeholder="เช่น จัดซื้อ"></div>
-        <div style="flex:2 1 260px;min-width:0"><label class="f" for="newMail">อีเมลหลัก (Google Group)</label><input type="email" id="newMail" inputmode="email" placeholder="ชื่อกลุ่ม@googlegroups.com"></div>
-      </div>
-      <div class="row"><button class="btn primary" id="addGroup" type="button">+ เพิ่มกลุ่ม</button></div>
+      <div class="sep"></div>
+      <p class="hint" style="margin:0 0 6px"><b>ขั้นที่ 3 ·</b> สร้างกลุ่มใน Google เสร็จแล้ว กดปุ่มนี้เพื่อรับลิงก์ลูกทีม</p>
+      <div class="row" style="margin-top:0"><button class="btn primary" id="addGroup" type="button">สร้างเสร็จแล้ว เพิ่มเข้าระบบ</button></div>
     </section>
     ${DATA.groups.length ? DATA.groups.map(adminGroupCard).join("") : '<p class="state">ยังไม่มีกลุ่ม เพิ่มกลุ่มแรกด้านบนได้เลย</p>'}`;
   document.querySelectorAll(".members").forEach(renumber);
+  updateWizard();
   dirty = false;
 }
 const render = () => DATA.role === "admin" ? renderAdmin() : renderTeam();
@@ -271,14 +337,13 @@ async function saveGroup(id, btn){
   catch (e){ setMsg("บันทึกไม่สำเร็จ: " + e.message, "bad"); btn.disabled = false; btn.textContent = label; }
 }
 async function addGroup(btn){
-  const n = $("newName"), m = $("newMail");
-  const name = n.value.trim(), group = m.value.trim().toLowerCase();
-  if (!name){ n.classList.add("err"); setMsg("กรุณาใส่ชื่อกลุ่ม", "bad"); return; }
-  if (!EMAIL_RE.test(group)){ m.classList.add("err"); setMsg("อีเมลหลักของกลุ่มไม่ถูกต้อง", "bad"); return; }
-  if (!GG_RE.test(group)){ m.classList.add("err"); setMsg("อีเมลหลักต้องลงท้ายด้วย @googlegroups.com", "bad"); return; }
+  const s = wizardState();
+  if (!s.name){ $("newName").classList.add("err"); setMsg("กรุณาใส่ชื่อกลุ่ม", "bad"); return; }
+  if (!PREFIX_RE.test(s.prefix)){ $("newPrefix").classList.add("err"); setMsg("อีเมลกลุ่มไม่ถูกต้อง (a-z, 0-9, ขีด - ห้ามมีจุด)", "bad"); return; }
+  const name = s.name, group = s.prefix + "@googlegroups.com";
   btn.disabled = true; btn.textContent = "กำลังเพิ่ม…";
-  try { DATA = await apiPost("gmAdd", { name, group }); render(); setMsg(`เพิ่มกลุ่ม ${name} แล้ว คัดลอกลิงก์ลูกทีมได้เลย`, "ok"); flash(DATA.added); }
-  catch (e){ setMsg("เพิ่มไม่สำเร็จ: " + e.message, "bad"); btn.disabled = false; btn.textContent = "+ เพิ่มกลุ่ม"; }
+  try { DATA = await apiPost("gmAdd", { name, group }); draft.clear(); render(); setMsg(`เพิ่มกลุ่ม ${name} แล้ว คัดลอกลิงก์ลูกทีมได้เลย`, "ok"); flash(DATA.added); }
+  catch (e){ setMsg("เพิ่มไม่สำเร็จ: " + e.message, "bad"); btn.disabled = false; btn.textContent = "สร้างเสร็จแล้ว เพิ่มเข้าระบบ"; }
 }
 async function deleteGroup(id, btn){
   btn.disabled = true; btn.textContent = "กำลังลบ…";
@@ -287,8 +352,15 @@ async function deleteGroup(id, btn){
 }
 
 document.addEventListener("click", e => {
+  const ac = e.target.closest("#askClaude");
+  if (ac && ac.getAttribute("aria-disabled") === "true"){ e.preventDefault(); setMsg("กรอกชื่อกลุ่มและอีเมลกลุ่มให้ถูกต้องก่อน", "bad"); return; }
   const t = e.target.closest("button");
   if (!t) return;
+  if (t.id === "copyName" || t.id === "copyPrefix" || t.id === "copyPrompt"){
+    const s = wizardState();
+    if (!s.name || !PREFIX_RE.test(s.prefix)){ setMsg("กรอกชื่อกลุ่มและอีเมลกลุ่มให้ถูกต้องก่อน", "bad"); return; }
+    copy(t.id === "copyName" ? s.name : t.id === "copyPrefix" ? s.prefix : claudePrompt(s.name, s.prefix), t); return;
+  }
   if (t.dataset.copy !== undefined){ copy(t.dataset.copy, t); return; }
   if (t.id === "join"){ doJoin(); return; }
   if (t.id === "addGroup"){ addGroup(t); return; }
@@ -315,7 +387,10 @@ document.addEventListener("click", e => {
 document.addEventListener("input", e => {
   if (!e.target.matches("input")) return;
   e.target.classList.remove("err");
-  if (e.target.id !== "me" && e.target.id !== "newName" && e.target.id !== "newMail"){ dirty = true; setMsg("ยังไม่ได้บันทึก"); }
+  if (e.target.id === "newName"){ const p = $("newPrefix"); if (!p.dataset.touched){ const sg = slug(e.target.value); p.value = sg ? sg + "-t" : ""; } }
+  if (e.target.id === "newPrefix") e.target.dataset.touched = "1";
+  if (e.target.id === "newName" || e.target.id === "newPrefix"){ updateWizard(); return; }
+  if (e.target.id !== "me"){ dirty = true; setMsg("ยังไม่ได้บันทึก"); }
   const box = e.target.closest(".members"); if (box) renumber(box);
 });
 window.addEventListener("hashchange", () => location.reload());
