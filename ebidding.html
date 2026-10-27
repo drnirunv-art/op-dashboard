@@ -318,6 +318,7 @@ document.addEventListener("input", e => {
   if (e.target.id !== "me" && e.target.id !== "newName" && e.target.id !== "newMail"){ dirty = true; setMsg("ยังไม่ได้บันทึก"); }
   const box = e.target.closest(".members"); if (box) renumber(box);
 });
+window.addEventListener("hashchange", () => location.reload());
 window.addEventListener("beforeunload", e => { if (dirty){ e.preventDefault(); e.returnValue = ""; } });
 
 (async () => {
