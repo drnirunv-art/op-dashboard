@@ -70,7 +70,7 @@ if (/ Line\//i.test(navigator.userAgent) && !new URLSearchParams(location.search
   u.searchParams.set("openExternalBrowser", "1"); location.replace(u.toString());
 }
 // ↓↓↓ วาง Web app URL ของ Apps Script ชุดใหม่ (E-bidding) ตรงนี้ ↓↓↓
-const API_URL = "PASTE_APPS_SCRIPT_URL_HERE";
+const API_URL = "https://script.google.com/macros/s/AKfycbyJXDBgmbSBVP4aCgWqHAM1PE36dXZMWbG-Mh8m0DlLhtTgQZ6TxMZk1Ix4KJLiILaH/exec";
 const TOKEN = new URLSearchParams(location.hash.slice(1)).get("t") || new URLSearchParams(location.search).get("t") || "";
 const DEFAULT_ROWS = 8;
 const $ = id => document.getElementById(id);
