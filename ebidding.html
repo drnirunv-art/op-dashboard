@@ -102,17 +102,22 @@ function render(){
   document.title = admin ? "อีเมลกลุ่ม E-bidding · ผู้ดูแลระบบ" : "อีเมลกลุ่ม E-bidding";
   $("app").innerHTML = `
     <h1>อีเมลกลุ่ม E-bidding ${admin ? '<span class="badge">ผู้ดูแลระบบ</span>' : ""}</h1>
-    <p class="lead">ใส่อีเมลสมาชิกของกลุ่ม ช่องละ 1 อีเมล แล้วกด <b>บันทึก</b> ถ้ามีคนออกจากทีม กด ✕ เพื่อลบออก</p>
+    <p class="lead">คนภายนอกส่งเมลมาที่อีเมลหลักได้ เมลจะส่งต่อถึงลูกทีมทุกคนที่เข้าร่วมกลุ่มแล้ว</p>
     <section class="card">
       <h2>1 · อีเมลหลักของกลุ่ม (Google Group)</h2>
       <div class="grow">
-        <input type="email" id="group" inputmode="email" autocomplete="off" value="${esc(DATA.group)}" placeholder="Ebidding.t@googlegroups.com" ${admin ? "" : "readonly"}>
+        <input type="email" id="group" inputmode="email" autocomplete="off" value="${esc(DATA.group)}" placeholder="ebidding-t@googlegroups.com" ${admin ? "" : "readonly"}>
         <button class="btn" id="copy" type="button">คัดลอก</button>
       </div>
       <p class="hint">${admin ? "ผู้ดูแลระบบแก้อีเมลหลักได้" : "ผู้ดูแลระบบเป็นผู้กำหนด"}</p>
     </section>
     <section class="card">
-      <h2>2 · อีเมลสมาชิกในกลุ่ม <span class="count" id="count"></span></h2>
+      <h2>2 · เข้าร่วมกลุ่ม (ลูกทีมทุกคนต้องทำ)</h2>
+      <p class="hint" style="margin:0 0 10px">กดปุ่มด้านล่าง แล้วกด <b>เข้าร่วมกลุ่ม / Join group</b> ด้วยบัญชี Gmail ของตัวเอง เมลที่ส่งมาที่อีเมลหลักจะส่งต่อถึงคุณทันที</p>
+      <a class="btn primary" style="display:inline-block;text-decoration:none" href="https://groups.google.com/g/ebidding-t" target="_blank" rel="noopener">เข้าร่วมกลุ่ม E-bidding</a>
+    </section>
+    <section class="card">
+      <h2>3 · รายชื่ออีเมลลูกทีม (สำหรับจดไว้) <span class="count" id="count"></span></h2>
       <label class="f">ไม่จำกัดจำนวน · กด + เพิ่มช่อง · กด ✕ ลบ · ช่องละ 1 อีเมล</label>
       <div class="members" id="members">${list.map(memberRow).join("")}</div>
       <button class="btn add" id="addRow" type="button">+ เพิ่มช่องอีเมล</button>
