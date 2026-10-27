@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>อีเมลกลุ่ม E-bidding</title>
+<title>อีเมลกลุ่ม</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap">
 <style>
@@ -56,16 +56,26 @@ input.err{border-color:var(--bad);outline:2px solid color-mix(in srgb,var(--bad)
 .done{border:1px solid var(--ok);border-radius:10px;padding:12px;margin-top:12px}
 .done p{margin:0 0 10px}
 a.btn{display:inline-block;text-decoration:none}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+.grp h2{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.chip{font-size:12px;font-weight:600;border-radius:999px;padding:2px 10px;background:color-mix(in srgb,var(--accent) 15%,var(--panel));color:var(--accent)}
+.btn.danger{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 45%,var(--line))}
+.btn.danger.solid{background:var(--bad);color:#fff;border-color:var(--bad)}
+.confirm{margin-top:10px;padding:10px 12px;border:1px solid var(--bad);border-radius:10px}
+.confirm p{margin:0 0 8px}
+details.howto{margin-top:6px}
+details.howto summary{cursor:pointer;font-weight:600;color:var(--accent)}
+details.howto ol{margin:8px 0 0;padding-left:22px;display:grid;gap:4px}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px}
+.sep{height:1px;background:var(--line);margin:14px 0}
+@media (max-width:520px){.grow{flex-wrap:wrap}.grow .btn{flex:1 1 auto}}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div id="app"><p class="state">กำลังโหลด…</p></div>
 </div>
-<div class="bar" id="bar" hidden>
-  <span class="msg" id="msg"></span>
-  <button class="btn primary" id="save">บันทึก</button>
-</div>
+<div class="bar" id="bar" hidden><span class="msg" id="msg"></span></div>
 
 <script>
 // LINE's in-app browser misbehaves with forms, so ask LINE to reopen the page in Chrome/Safari (once)
@@ -74,15 +84,18 @@ if (/ Line\//i.test(navigator.userAgent) && !new URLSearchParams(location.search
   if (key){ u.searchParams.set("t", key); u.hash = ""; }
   u.searchParams.set("openExternalBrowser", "1"); location.replace(u.toString());
 }
-// ↓↓↓ วาง Web app URL ของ Apps Script ชุดใหม่ (E-bidding) ตรงนี้ ↓↓↓
 const API_URL = "https://script.google.com/macros/s/AKfycbyJXDBgmbSBVP4aCgWqHAM1PE36dXZMWbG-Mh8m0DlLhtTgQZ6TxMZk1Ix4KJLiILaH/exec";
 const TOKEN = new URLSearchParams(location.hash.slice(1)).get("t") || new URLSearchParams(location.search).get("t") || "";
-const DEFAULT_ROWS = 8;
+const PAGE_URL = location.origin + location.pathname;
+const DEFAULT_ROWS = 4;
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const EMAIL_RE = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
 const GMAIL_RE = /^[a-z0-9.+_-]+@(gmail|googlemail)\.com$/i;
-const JOIN_URL = em => "https://groups.google.com/g/ebidding-t?authuser=" + encodeURIComponent(em);
+const GG_RE = /^([a-z0-9._-]+)@googlegroups\.com$/i;
+const groupPage = g => { const m = GG_RE.exec(g || ""); return m ? "https://groups.google.com/g/" + m[1] : "https://groups.google.com/my-groups"; };
+const joinUrl = (g, em) => groupPage(g) + "?authuser=" + encodeURIComponent(em);
+const teamLink = token => PAGE_URL + "#t=" + token;
 const remember = { get(){ try { return localStorage.getItem("eb_me") || ""; } catch { return ""; } }, set(v){ try { localStorage.setItem("eb_me", v); } catch {} } };
 let DATA = null, dirty = false;
 
@@ -90,34 +103,51 @@ async function apiGet(){
   const r = await fetch(API_URL + "?" + new URLSearchParams({ api: "ebGet", t: TOKEN }), { credentials: "omit" });
   const d = await r.json(); if (d.error) throw new Error(d.error); return d;
 }
-async function apiSave(data){
-  const r = await fetch(API_URL, { method: "POST", credentials: "omit", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ fn: "ebSave", t: TOKEN, data }) });
+async function apiPost(fn, data){
+  const r = await fetch(API_URL, { method: "POST", credentials: "omit", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ fn, t: TOKEN, data }) });
   const d = await r.json(); if (d.error) throw new Error(d.error); return d;
 }
-function setMsg(text, kind){ $("msg").textContent = text; $("msg").className = "msg " + (kind || ""); }
-const memberRow = (m, i) => `<div class="m"><span>${i + 1}</span><input type="email" inputmode="email" autocomplete="off" placeholder="name@gmail.com" value="${esc(m)}"><button class="x plus" type="button" title="เพิ่มอีเมลถัดจากช่องนี้" aria-label="เพิ่มอีเมลถัดจากช่องนี้">+</button><button class="x del" type="button" title="ลบ" aria-label="ลบอีเมลนี้">✕</button></div>`;
-
-function renumber(){
-  const rows = [...document.querySelectorAll(".members .m")];
+function setMsg(text, kind){ $("bar").hidden = !text; $("msg").textContent = text; $("msg").className = "msg " + (kind || ""); }
+const stamp = () => new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
+async function copy(text, btn){
+  try { await navigator.clipboard.writeText(text); const o = btn.textContent; btn.textContent = "คัดลอกแล้ว"; setTimeout(() => btn.textContent = o, 1500); }
+  catch { const i = btn.parentElement.querySelector("input"); if (i){ i.removeAttribute("readonly"); i.select(); i.setAttribute("readonly", ""); } setMsg("เลือกข้อความแล้ว กดคัดลอกเองได้เลย"); }
+}
+const memberRow = (m, i) => `<div class="m"><span>${i + 1}</span><input type="email" inputmode="email" autocomplete="off" placeholder="name@gmail.com" value="${esc(m)}"><button class="x plus" type="button" title="เพิ่มช่องถัดไป" aria-label="เพิ่มช่องถัดไป">+</button><button class="x del" type="button" title="ลบ" aria-label="ลบอีเมลนี้">✕</button></div>`;
+function membersBox(id, members){
+  const list = members.slice(); while (list.length < DEFAULT_ROWS) list.push("");
+  return `<div class="members" data-members="${esc(id)}">${list.map(memberRow).join("")}</div>`;
+}
+function renumber(box){
+  const rows = [...box.querySelectorAll(".m")];
   rows.forEach((r, i) => r.querySelector("span").textContent = i + 1);
-  $("count").textContent = `(${rows.filter(r => r.querySelector("input").value.trim()).length} อีเมล)`;
+  const c = box.closest("section").querySelector(".count");
+  if (c) c.textContent = `(${rows.filter(r => r.querySelector("input").value.trim()).length} คน)`;
+}
+function readMembers(box){
+  let bad = 0;
+  const out = [...box.querySelectorAll("input")].map(el => {
+    const v = el.value.trim().toLowerCase();
+    if (v && !GMAIL_RE.test(v)){ el.classList.add("err"); bad++; }
+    return v;
+  }).filter(Boolean);
+  if (bad) throw new Error(`ใช้ได้เฉพาะ Gmail (@gmail.com) มี ${bad} ช่องที่ไม่ถูกต้อง (กรอบสีแดง)`);
+  const seen = new Set(), dup = out.filter(m => seen.has(m) || !seen.add(m));
+  if (dup.length) throw new Error("มีอีเมลซ้ำ: " + dup.join(", "));
+  return out;
 }
 
-function render(){
-  const admin = DATA.role === "admin";
-  const list = DATA.members.slice();
-  while (list.length < DEFAULT_ROWS) list.push("");
-  document.title = admin ? "อีเมลกลุ่ม E-bidding · ผู้ดูแลระบบ" : "อีเมลกลุ่ม E-bidding";
+/* ---------- team view (one group) ---------- */
+function renderTeam(){
+  const g = DATA.group;
+  document.title = "อีเมลกลุ่ม " + g.name;
   $("app").innerHTML = `
-    <h1>อีเมลกลุ่ม E-bidding ${admin ? '<span class="badge">ผู้ดูแลระบบ</span>' : ""}</h1>
+    <h1>อีเมลกลุ่ม ${esc(g.name)}</h1>
     <p class="lead">คนภายนอกส่งเมลมาที่อีเมลหลักของกลุ่ม แล้วเมลจะส่งถึงลูกทีมทุกคนที่เข้าร่วมกลุ่มแล้วโดยอัตโนมัติ</p>
     <section class="card">
       <h2>1 · อีเมลหลักของกลุ่ม (Google Group)</h2>
-      <div class="grow">
-        <input type="email" id="group" inputmode="email" autocomplete="off" value="${esc(DATA.group)}" placeholder="ebidding-t@googlegroups.com" ${admin ? "" : "readonly"}>
-        <button class="btn" id="copy" type="button">คัดลอก</button>
-      </div>
-      <p class="hint">${admin ? "ผู้ดูแลระบบแก้อีเมลหลักได้" : "ผู้ดูแลระบบเป็นผู้กำหนด"}</p>
+      <div class="grow"><input type="text" id="gmail-main" value="${esc(g.group)}" readonly><button class="btn" data-copy="${esc(g.group)}" type="button">คัดลอก</button></div>
+      <p class="hint">ผู้ดูแลระบบเป็นผู้กำหนด</p>
     </section>
     <section class="card">
       <h2>2 · ลงทะเบียนและเข้าร่วมกลุ่ม (ลูกทีมทุกคนต้องทำ)</h2>
@@ -135,91 +165,160 @@ function render(){
       <p class="warn"><b>สำคัญ:</b> ก่อนกด Join group ให้ดูรูปโปรไฟล์มุมขวาบนของหน้า Google Groups ว่าเป็น Gmail เดียวกับที่กรอกไว้ ถ้าไม่ใช่ ให้กดรูปโปรไฟล์แล้วเปลี่ยนบัญชีก่อน ไม่อย่างนั้นเมลจะไปเข้าบัญชีอื่น</p>
     </section>
     <section class="card">
-      <h2>3 · รายชื่อลูกทีมที่ลงทะเบียนแล้ว <span class="count" id="count"></span></h2>
+      <h2>3 · รายชื่อลูกทีมที่ลงทะเบียนแล้ว <span class="count"></span></h2>
       <label class="f">Gmail เท่านั้น · กด + เพิ่มช่อง · กด ✕ ลบ · ช่องละ 1 อีเมล</label>
-      <div class="members" id="members">${list.map(memberRow).join("")}</div>
-      <button class="btn add" id="addRow" type="button">+ เพิ่มช่องอีเมล</button>
+      ${membersBox(g.id, g.members)}
+      <div class="row"><button class="btn add" data-add="${esc(g.id)}" type="button">+ เพิ่มช่องอีเมล</button><button class="btn primary" data-save="${esc(g.id)}" type="button">บันทึกรายชื่อ</button></div>
     </section>`;
-  renumber();
-  $("bar").hidden = false;
-  dirty = false; setMsg("");
-}
-
-document.addEventListener("click", async e => {
-  const t = e.target;
-  if (t.id === "copy"){
-    try { await navigator.clipboard.writeText($("group").value.trim()); setMsg("คัดลอกอีเมลกลุ่มแล้ว", "ok"); }
-    catch { $("group").select(); setMsg("เลือกข้อความแล้ว กดคัดลอกเองได้เลย"); }
-    return;
-  }
-  if (t.id === "join"){ doJoin(); return; }
-  if (t.id === "addRow"){
-    const box = $("members");
-    box.insertAdjacentHTML("beforeend", memberRow("", box.children.length));
-    box.lastElementChild.querySelector("input").focus();
-    renumber(); dirty = true; setMsg("ยังไม่ได้บันทึก"); return;
-  }
-  const plus = t.closest(".plus");
-  if (plus){
-    const row = plus.closest(".m");
-    row.insertAdjacentHTML("afterend", memberRow("", 0));
-    row.nextElementSibling.querySelector("input").focus();
-    renumber(); dirty = true; setMsg("ยังไม่ได้บันทึก"); return;
-  }
-  const del = t.closest(".del");
-  if (del){ del.closest(".m").remove(); renumber(); dirty = true; setMsg("ยังไม่ได้บันทึก"); }
-});
-document.addEventListener("input", e => { if (e.target.matches("input")){ e.target.classList.remove("err"); dirty = true; setMsg("ยังไม่ได้บันทึก"); renumber(); } });
-window.addEventListener("beforeunload", e => { if (dirty){ e.preventDefault(); e.returnValue = ""; } });
-
-function collect(){
-  let bad = 0;
-  const check = el => { const v = el.value.trim(); if (v && !EMAIL_RE.test(v)){ el.classList.add("err"); bad++; } return v; };
-  const group = check($("group"));
-  let notGmail = 0;
-  const members = [...document.querySelectorAll(".members input")].map(el => { const v = check(el); if (v && EMAIL_RE.test(v) && !GMAIL_RE.test(v)){ el.classList.add("err"); notGmail++; } return v; }).filter(Boolean);
-  if (bad) throw new Error(`มีอีเมลที่รูปแบบไม่ถูกต้อง ${bad} ช่อง (กรอบสีแดง)`);
-  if (notGmail) throw new Error(`ใช้ได้เฉพาะ Gmail (@gmail.com) มี ${notGmail} ช่องที่ไม่ใช่ Gmail (กรอบสีแดง)`);
-  const seen = new Set(), dup = members.filter(m => { const k = m.toLowerCase(); if (seen.has(k)) return true; seen.add(k); return false; });
-  if (dup.length) throw new Error("มีอีเมลซ้ำ: " + dup.join(", "));
-  return { group, members };
+  document.querySelectorAll(".members").forEach(renumber);
+  dirty = false;
 }
 async function doJoin(){
   const el = $("me"), em = el.value.trim().toLowerCase();
   if (!GMAIL_RE.test(em)){ el.classList.add("err"); el.focus(); setMsg("กรุณากรอก Gmail ที่ลงท้ายด้วย @gmail.com", "bad"); return; }
-  const box = $("members");
-  const has = [...box.querySelectorAll("input")].some(i => i.value.trim().toLowerCase() === em);
-  if (!has){
-    const empty = [...box.querySelectorAll("input")].find(i => !i.value.trim());
-    if (empty) empty.value = em; else box.insertAdjacentHTML("beforeend", memberRow(em, box.children.length));
-  }
-  let data;
-  try { data = collect(); } catch (e){ setMsg(e.message, "bad"); return; }
-  const btn = $("join"); btn.disabled = true; btn.textContent = "กำลังบันทึก…"; setMsg("");
+  const g = DATA.group;
+  const box = document.querySelector(".members");
+  let members;
+  try { members = readMembers(box); } catch (e){ setMsg(e.message, "bad"); return; }
+  if (!members.includes(em)) members.push(em);
+  const btn = $("join"); btn.disabled = true; btn.textContent = "กำลังบันทึก…";
   try {
-    DATA = await apiSave(data);
+    DATA = await apiPost("ebSave", { members });
     remember.set(em);
-    render();
+    renderTeam();
     $("me").value = em;
     const jb = $("joinBox"); jb.hidden = false; jb.className = "done";
     jb.innerHTML = `<p>บันทึก <b>${esc(em)}</b> แล้ว ขั้นต่อไปกดปุ่มนี้ แล้วกด <b>Join group</b> ในหน้าที่เปิดขึ้นมา</p>
-      <a class="btn primary" href="${JOIN_URL(em)}" target="_blank" rel="noopener">เปิดหน้าเข้าร่วมกลุ่ม</a>`;
-    setMsg("บันทึกแล้ว " + new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }), "ok");
+      <a class="btn primary" href="${esc(joinUrl(g.group, em))}" target="_blank" rel="noopener">เปิดหน้าเข้าร่วมกลุ่ม</a>`;
+    setMsg("บันทึกแล้ว " + stamp(), "ok");
     jb.scrollIntoView({ behavior: "smooth", block: "center" });
   } catch (e){ setMsg("บันทึกไม่สำเร็จ: " + e.message, "bad"); }
   finally { const b = $("join"); if (b){ b.disabled = false; b.textContent = "บันทึกและเข้าร่วมกลุ่ม"; } }
 }
-$("save").onclick = async () => {
+
+/* ---------- admin view (all groups) ---------- */
+function adminGroupCard(g){
+  const link = teamLink(g.token);
+  return `<section class="card grp" data-gid="${esc(g.id)}">
+    <h2>${esc(g.name)} <span class="chip">${g.members.length} คนลงทะเบียน</span></h2>
+    <label class="f">ลิงก์สำหรับลูกทีม (ส่งลิงก์นี้ให้ทีม ${esc(g.name)})</label>
+    <div class="grow"><input type="text" class="mono" value="${esc(link)}" readonly><button class="btn primary" data-copy="${esc(link)}" type="button">คัดลอกลิงก์</button></div>
+    <div class="row">
+      <div style="flex:1 1 200px;min-width:0"><label class="f">ชื่อกลุ่ม</label><input type="text" class="g-name" value="${esc(g.name)}"></div>
+      <div style="flex:2 1 260px;min-width:0"><label class="f">อีเมลหลัก (Google Group)</label><input type="email" class="g-mail" value="${esc(g.group)}"></div>
+    </div>
+    <p class="hint"><a href="${esc(groupPage(g.group))}/members" target="_blank" rel="noopener">เปิดรายชื่อสมาชิกจริงใน Google Groups</a> · ใช้เทียบว่าใครกด Join group แล้ว</p>
+    <label class="f">ลูกทีมที่ลงทะเบียน <span class="count"></span></label>
+    ${membersBox(g.id, g.members)}
+    <div class="row">
+      <button class="btn add" data-add="${esc(g.id)}" type="button">+ เพิ่มช่องอีเมล</button>
+      <button class="btn primary" data-save="${esc(g.id)}" type="button">บันทึกกลุ่มนี้</button>
+      <button class="btn danger" data-del="${esc(g.id)}" type="button" style="margin-left:auto">ลบกลุ่มนี้</button>
+    </div>
+    <div class="confirm" data-confirm="${esc(g.id)}" hidden>
+      <p>ลบกลุ่ม <b>${esc(g.name)}</b> ออกจากหน้านี้? ลิงก์ลูกทีมของกลุ่มนี้จะใช้ไม่ได้ทันที (Google Group จริงไม่ถูกลบ)</p>
+      <div class="row" style="margin:0"><button class="btn danger solid" data-delyes="${esc(g.id)}" type="button">ยืนยันลบ</button><button class="btn" data-delno="${esc(g.id)}" type="button">ยกเลิก</button></div>
+    </div>
+  </section>`;
+}
+function renderAdmin(){
+  document.title = "จัดการอีเมลกลุ่ม · ผู้ดูแลระบบ";
+  $("app").innerHTML = `
+    <h1>จัดการอีเมลกลุ่ม <span class="badge">ผู้ดูแลระบบ</span></h1>
+    <p class="lead">ลิงก์นี้สำหรับคุณคนเดียว ห้ามส่งต่อ · แต่ละกลุ่มมีลิงก์ลูกทีมของตัวเอง ลูกทีมกลุ่มหนึ่งจะไม่เห็นกลุ่มอื่น</p>
+    <section class="card">
+      <h2>เพิ่มกลุ่มใหม่</h2>
+      <details class="howto">
+        <summary>ขั้นที่ 1 · สร้าง Google Group ก่อน (กดเพื่อดูวิธี)</summary>
+        <ol>
+          <li>เปิด <a href="https://groups.google.com/my-groups?create-group=1" target="_blank" rel="noopener">groups.google.com → Create group</a> ด้วยบัญชี dr.nirun.v@gmail.com</li>
+          <li>ตั้งชื่อกลุ่ม และอีเมลกลุ่ม (ใช้ตัวอักษร ตัวเลข และขีด - เท่านั้น ห้ามใส่จุด) แล้วกด Next</li>
+          <li>Who can search for group = <b>Anyone on the web</b></li>
+          <li>Who can join group = <b>Anyone can join</b></li>
+          <li>Who can view conversations = <b>Group members</b></li>
+          <li>Who can post = <b>Anyone on the web</b> (ให้คนนอกส่งเมลเข้ามาได้)</li>
+          <li>กด Next → ไม่ต้องใส่สมาชิก → กด Create group → ยืนยันว่าไม่ใช่โปรแกรมอัตโนมัติ</li>
+        </ol>
+      </details>
+      <p class="hint" style="margin-top:10px"><b>ขั้นที่ 2 ·</b> กรอกชื่อและอีเมลของกลุ่มที่สร้างแล้ว แล้วกดเพิ่มกลุ่ม จะได้ลิงก์สำหรับลูกทีมทันที</p>
+      <div class="row">
+        <div style="flex:1 1 200px;min-width:0"><label class="f" for="newName">ชื่อกลุ่ม</label><input type="text" id="newName" placeholder="เช่น จัดซื้อ"></div>
+        <div style="flex:2 1 260px;min-width:0"><label class="f" for="newMail">อีเมลหลัก (Google Group)</label><input type="email" id="newMail" inputmode="email" placeholder="ชื่อกลุ่ม@googlegroups.com"></div>
+      </div>
+      <div class="row"><button class="btn primary" id="addGroup" type="button">+ เพิ่มกลุ่ม</button></div>
+    </section>
+    ${DATA.groups.length ? DATA.groups.map(adminGroupCard).join("") : '<p class="state">ยังไม่มีกลุ่ม เพิ่มกลุ่มแรกด้านบนได้เลย</p>'}`;
+  document.querySelectorAll(".members").forEach(renumber);
+  dirty = false;
+}
+const render = () => DATA.role === "admin" ? renderAdmin() : renderTeam();
+function flash(id){ const s = document.querySelector(`[data-gid="${CSS.escape(id)}"]`); if (s) s.scrollIntoView({ behavior: "smooth", block: "start" }); }
+
+async function saveGroup(id, btn){
+  const sec = btn.closest("section"), box = sec.querySelector(".members");
   let data;
-  try { data = collect(); } catch (e){ setMsg(e.message, "bad"); return; }
-  const btn = $("save"); btn.disabled = true; btn.textContent = "กำลังบันทึก…"; setMsg("");
   try {
-    DATA = await apiSave(data);
-    render();
-    setMsg("บันทึกแล้ว " + new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }), "ok");
-  } catch (e){ setMsg("บันทึกไม่สำเร็จ: " + e.message, "bad"); }
-  finally { btn.disabled = false; btn.textContent = "บันทึก"; }
-};
+    data = { id, members: readMembers(box) };
+    if (DATA.role === "admin"){
+      const n = sec.querySelector(".g-name"), m = sec.querySelector(".g-mail");
+      data.name = n.value.trim(); data.group = m.value.trim().toLowerCase();
+      if (!data.name){ n.classList.add("err"); throw new Error("กรุณาใส่ชื่อกลุ่ม"); }
+      if (!EMAIL_RE.test(data.group)){ m.classList.add("err"); throw new Error("อีเมลหลักของกลุ่มไม่ถูกต้อง"); }
+    }
+  } catch (e){ setMsg(e.message, "bad"); return; }
+  const label = btn.textContent; btn.disabled = true; btn.textContent = "กำลังบันทึก…";
+  try { DATA = await apiPost("ebSave", data); render(); setMsg("บันทึกแล้ว " + stamp(), "ok"); if (DATA.role === "admin") flash(id); }
+  catch (e){ setMsg("บันทึกไม่สำเร็จ: " + e.message, "bad"); btn.disabled = false; btn.textContent = label; }
+}
+async function addGroup(btn){
+  const n = $("newName"), m = $("newMail");
+  const name = n.value.trim(), group = m.value.trim().toLowerCase();
+  if (!name){ n.classList.add("err"); setMsg("กรุณาใส่ชื่อกลุ่ม", "bad"); return; }
+  if (!EMAIL_RE.test(group)){ m.classList.add("err"); setMsg("อีเมลหลักของกลุ่มไม่ถูกต้อง", "bad"); return; }
+  if (!GG_RE.test(group)){ m.classList.add("err"); setMsg("อีเมลหลักต้องลงท้ายด้วย @googlegroups.com", "bad"); return; }
+  btn.disabled = true; btn.textContent = "กำลังเพิ่ม…";
+  try { DATA = await apiPost("gmAdd", { name, group }); render(); setMsg(`เพิ่มกลุ่ม ${name} แล้ว คัดลอกลิงก์ลูกทีมได้เลย`, "ok"); flash(DATA.added); }
+  catch (e){ setMsg("เพิ่มไม่สำเร็จ: " + e.message, "bad"); btn.disabled = false; btn.textContent = "+ เพิ่มกลุ่ม"; }
+}
+async function deleteGroup(id, btn){
+  btn.disabled = true; btn.textContent = "กำลังลบ…";
+  try { DATA = await apiPost("gmDelete", { id }); render(); setMsg("ลบกลุ่มแล้ว", "ok"); }
+  catch (e){ setMsg("ลบไม่สำเร็จ: " + e.message, "bad"); btn.disabled = false; btn.textContent = "ยืนยันลบ"; }
+}
+
+document.addEventListener("click", e => {
+  const t = e.target.closest("button");
+  if (!t) return;
+  if (t.dataset.copy !== undefined){ copy(t.dataset.copy, t); return; }
+  if (t.id === "join"){ doJoin(); return; }
+  if (t.id === "addGroup"){ addGroup(t); return; }
+  if (t.dataset.save){ saveGroup(t.dataset.save, t); return; }
+  if (t.dataset.del){ document.querySelector(`[data-confirm="${CSS.escape(t.dataset.del)}"]`).hidden = false; return; }
+  if (t.dataset.delno){ document.querySelector(`[data-confirm="${CSS.escape(t.dataset.delno)}"]`).hidden = true; return; }
+  if (t.dataset.delyes){ deleteGroup(t.dataset.delyes, t); return; }
+  if (t.dataset.add){
+    const box = t.closest("section").querySelector(".members");
+    box.insertAdjacentHTML("beforeend", memberRow("", box.children.length));
+    box.lastElementChild.querySelector("input").focus();
+    renumber(box); dirty = true; setMsg("ยังไม่ได้บันทึก"); return;
+  }
+  if (t.classList.contains("plus")){
+    const row = t.closest(".m"), box = row.closest(".members");
+    row.insertAdjacentHTML("afterend", memberRow("", 0));
+    row.nextElementSibling.querySelector("input").focus();
+    renumber(box); dirty = true; setMsg("ยังไม่ได้บันทึก"); return;
+  }
+  if (t.classList.contains("del")){
+    const box = t.closest(".members"); t.closest(".m").remove(); renumber(box); dirty = true; setMsg("ยังไม่ได้บันทึก");
+  }
+});
+document.addEventListener("input", e => {
+  if (!e.target.matches("input")) return;
+  e.target.classList.remove("err");
+  if (e.target.id !== "me" && e.target.id !== "newName" && e.target.id !== "newMail"){ dirty = true; setMsg("ยังไม่ได้บันทึก"); }
+  const box = e.target.closest(".members"); if (box) renumber(box);
+});
+window.addEventListener("beforeunload", e => { if (dirty){ e.preventDefault(); e.returnValue = ""; } });
 
 (async () => {
   if (!TOKEN){ $("app").innerHTML = `<p class="state">ลิงก์ไม่ครบ กรุณาเปิดจากลิงก์ที่ได้รับ</p>`; return; }
