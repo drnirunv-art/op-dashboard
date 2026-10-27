@@ -91,11 +91,11 @@ function setMsg(text, kind){ $("msg").textContent = text; $("msg").className = "
 function membersHtml(h){
   const list = h.members.slice();
   while (list.length < DEFAULT_ROWS) list.push("");
-  return `<label class="f">3 · อีเมลลูกทีม (เพิ่มหรือลบได้ ช่องละ 1 อีเมล)</label>
+  return `<label class="f">3 · อีเมลลูกทีม (ไม่จำกัดจำนวน · กด + เพิ่มช่อง · กด ✕ ลบ · ช่องละ 1 อีเมล)</label>
     <div class="members" data-members="${esc(h.key)}">${list.map((m, i) => memberRow(m, i)).join("")}</div>
     <button class="btn add" data-add="${esc(h.key)}" type="button">+ เพิ่มช่องอีเมล</button>`;
 }
-const memberRow = (m, i) => `<div class="m"><span>${i + 1}</span><input type="email" inputmode="email" autocomplete="off" placeholder="name@example.com" value="${esc(m)}"><button class="x" type="button" title="ลบ" aria-label="ลบอีเมลนี้">✕</button></div>`;
+const memberRow = (m, i) => `<div class="m"><span>${i + 1}</span><input type="email" inputmode="email" autocomplete="off" placeholder="name@example.com" value="${esc(m)}"><button class="x plus" type="button" title="เพิ่มอีเมลถัดจากช่องนี้" aria-label="เพิ่มอีเมลถัดจากช่องนี้">+</button><button class="x" type="button" title="ลบ" aria-label="ลบอีเมลนี้">✕</button></div>`;
 
 function hospitalCard(h, admin){
   return `<section class="card" data-key="${esc(h.key)}">
@@ -142,6 +142,15 @@ document.addEventListener("click", e => {
     const box = document.querySelector(`[data-members="${add.dataset.add}"]`);
     box.insertAdjacentHTML("beforeend", memberRow("", box.children.length));
     box.lastElementChild.querySelector("input").focus();
+    dirty = true; setMsg("ยังไม่ได้บันทึก");
+    return;
+  }
+  const plus = e.target.closest(".plus");
+  if (plus){
+    const row = plus.closest(".m"), box = row.closest(".members");
+    row.insertAdjacentHTML("afterend", memberRow("", 0));
+    [...box.children].forEach((r, i) => r.querySelector("span").textContent = i + 1);
+    row.nextElementSibling.querySelector("input").focus();
     dirty = true; setMsg("ยังไม่ได้บันทึก");
     return;
   }
