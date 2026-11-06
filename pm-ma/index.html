@@ -355,7 +355,7 @@ async function hospital(){
 function contractsHtml(C, steps){
   const rows = C.slice().sort((a,b) => (b.renew - a.renew) || ((a.daysLeft ?? 1e9) - (b.daysLeft ?? 1e9))).map(c => `
     <tr><td>${esc(c.sys)}<br><b>${esc(c.scope)}</b>${c.n ? `<br><small>${esc(c.n)} เครื่อง</small>` : ""}</td>
-    <td>${esc(c.vendor || "-")}</td><td class="n">${c.freq || "-"}</td>
+    <td>${esc(c.vendor || "-")}${c.steps && c.steps[3] && c.steps[3].seller && c.steps[3].seller !== c.vendor ? `<br><span class="pill s-part">PO ใหม่: ${esc(c.steps[3].seller)}</span>` : ""}</td><td class="n">${c.freq || "-"}</td>
     <td class="n">${thd(c.start)}<br>${thd(c.end)}</td>
     <td class="n"><span class="pill ${statusCls(c.status)}">${esc(c.status)}</span><br><small>${dayTxt(c)}</small></td>
     <td>${c.renew ? `<b>${esc(c.stage)}</b><div class="steps">${steps.map((s,i) => `<span class="${c.steps[i]?"y":"n"}">${c.steps[i]?"✓":"○"} ${esc(s)}</span>`).join("")}</div>` : (c.poDone ? `<span class="pill s-ok">ออก PO แล้ว</span>` : "-")}</td>
@@ -375,11 +375,11 @@ function visitsHtml(C){
   ap.sort((x,y) => x[0].month < y[0].month ? -1 : 1);
   const apCls = s => /^ยืนยัน/.test(s) ? "s-ok" : /รอตอบ/.test(s) ? "s-part" : "s-watch";
   return `<div class="card"><h2>นัดหมายเข้า PM และการยืนยันจากผู้รับเหมา (${ap.length})</h2>
-    ${ap.length ? `<div class="tscroll"><table><thead><tr><th>เดือน</th><th>วันที่นัด</th><th>ผู้รับเหมา</th><th>งาน</th><th>สถานะยืนยัน</th><th>อ้างอิงอีเมล</th><th>ผู้บันทึก</th></tr></thead><tbody>${ap.map(([a,c]) => `<tr><td class="n">${MONTHS[+a.month.slice(5,7)-1]} ${+a.month.slice(0,4)+543}</td><td class="n">${thd(a.newDate || a.date)}</td><td>${esc(c.vendor)}</td><td>${esc(c.scope)}</td><td><span class="pill ${apCls(a.status)}">${esc(a.status)}</span></td><td>${esc(a.ref||"-")}</td><td>${esc(a.by||"-")}</td></tr>`).join("")}</tbody></table></div>` : `<p class="muted">ยังไม่มีการบันทึกนัดหมาย</p>`}</div>
+    ${ap.length ? `<div class="tscroll"><table><thead><tr><th>เดือน</th><th>วันที่นัด</th><th>ผู้รับเหมา</th><th>งาน</th><th>สถานะยืนยัน</th><th>อ้างอิงอีเมล</th><th>ผู้บันทึก</th></tr></thead><tbody>${ap.map(([a,c]) => `<tr><td class="n">${MONTHS[+a.month.slice(5,7)-1]} ${+a.month.slice(0,4)+543}</td><td class="n">${thd(a.newDate || a.date)}</td><td>${esc(a.vendor || c.vendor)}${a.vendor && a.vendor !== c.vendor ? `<br><span class="pill s-part">เจ้าอื่น</span>` : ""}</td><td>${esc(c.scope)}</td><td><span class="pill ${apCls(a.status)}">${esc(a.status)}</span></td><td>${esc(a.ref||"-")}</td><td>${esc(a.by||"-")}</td></tr>`).join("")}</tbody></table></div>` : `<p class="muted">ยังไม่มีการบันทึกนัดหมาย</p>`}</div>
     <div class="card"><h2>ผู้รับเหมาขาดรอบ PM ตามสัญญา (${od.length})</h2>
     ${od.length ? `<div class="tscroll"><table><thead><tr><th>ผู้รับเหมา</th><th>งาน</th><th>รอบ</th><th>เข้าล่าสุด</th></tr></thead><tbody>${od.map(c => `<tr><td>${esc(c.vendor)}</td><td>${esc(c.scope)}</td><td class="n">${c.freq}</td><td class="n s-miss">${thd(c.lastVisit)}</td></tr>`).join("")}</tbody></table></div>` : `<p class="muted">ไม่มีผู้รับเหมาขาดรอบ</p>`}</div>
     <div class="card"><h2>บันทึกการเข้า PM ล่าสุด</h2>
-    ${all.length ? `<div class="tscroll"><table><thead><tr><th>วันที่</th><th>ผู้รับเหมา</th><th>งาน</th><th>ผล</th><th>รายงาน</th></tr></thead><tbody>${all.slice(0,100).map(([v,c]) => `<tr><td class="n">${thd(v.date)}${v.onTime?`<br><small>${esc(v.onTime)}</small>`:""}</td><td>${esc(c.vendor)}${v.tech?`<br><small>ช่าง: ${esc(v.tech)}</small>`:""}</td><td>${esc(c.scope)}${v.detail?`<br><small>${esc(v.detail)}</small>`:""}${v.sup?`<br><small>ผู้ควบคุม: ${esc(v.sup)}</small>`:""}</td><td>${esc(v.result||"-")}${v.problem?`<br><small>${esc(v.problem)}</small>`:""}${/ต้อง/.test(v.quote||"")&&!/ไม่ต้อง/.test(v.quote)?`<br><span class="pill s-watch">ต้องเสนอราคาซ่อม</span>`:""}</td><td>${v.link?`<a href="${esc(v.link)}" target="_blank" rel="noopener">เปิด</a>`:"-"}</td></tr>`).join("")}</tbody></table></div>` : `<p class="muted">ยังไม่มีบันทึก</p>`}</div>`;
+    ${all.length ? `<div class="tscroll"><table><thead><tr><th>วันที่</th><th>ผู้รับเหมา</th><th>งาน</th><th>ผล</th><th>รายงาน</th></tr></thead><tbody>${all.slice(0,100).map(([v,c]) => `<tr><td class="n">${thd(v.date)}${v.onTime?`<br><small>${esc(v.onTime)}</small>`:""}</td><td>${esc(v.vendor || c.vendor)}${v.vendor && v.vendor !== c.vendor ? `<br><span class="pill s-part">เจ้าอื่น</span>` : ""}${v.tech?`<br><small>ช่าง: ${esc(v.tech)}</small>`:""}</td><td>${esc(c.scope)}${v.detail?`<br><small>${esc(v.detail)}</small>`:""}${v.sup?`<br><small>ผู้ควบคุม: ${esc(v.sup)}</small>`:""}</td><td>${esc(v.result||"-")}${v.problem?`<br><small>${esc(v.problem)}</small>`:""}${/ต้อง/.test(v.quote||"")&&!/ไม่ต้อง/.test(v.quote)?`<br><span class="pill s-watch">ต้องเสนอราคาซ่อม</span>`:""}</td><td>${v.link?`<a href="${esc(v.link)}" target="_blank" rel="noopener">เปิด</a>`:"-"}</td></tr>`).join("")}</tbody></table></div>` : `<p class="muted">ยังไม่มีบันทึก</p>`}</div>`;
 }
 
 function planHtml(P){
@@ -408,6 +408,7 @@ function recordHtml(C, steps, confirm){
   $("pane").innerHTML = `<div class="forms">
     <div class="card"><h2>ก. นัดหมายและยืนยันการเข้า PM</h2><p class="muted">กรอกก่อนผู้รับเหมาเข้า เมื่อส่งอีเมลนัดหรือผู้รับเหมาตอบกลับ (บันทึกซ้ำได้ ระบบใช้รายการล่าสุด)</p>
       <label>สัญญา / ผู้รับเหมา</label><select id="aK">${opts}</select>
+      <label>ผู้รับเหมาที่จะเข้า (เจ้าเดิม หรือพิมพ์ชื่อเจ้าอื่น)</label><input id="aV" list="vendors">
       <label>เดือนตามแผน</label><input id="aM" type="month" value="${today.slice(0,7)}">
       <label>วันที่นัดเข้า</label><input id="aD" type="date">
       <label>สถานะการยืนยันจากผู้รับเหมา</label><select id="aS">${CF.map(x=>`<option>${esc(x)}</option>`).join("")}</select>
@@ -418,6 +419,7 @@ function recordHtml(C, steps, confirm){
       <button class="btn" id="aSave">บันทึกนัดหมาย</button><div class="msg" id="aMsg"></div></div>
     <div class="card"><h2>ข. บันทึกผลการเข้า PM</h2><p class="muted">กรอกหลังผู้รับเหมาเข้าทำงานจริง</p>
       <label>สัญญา / ผู้รับเหมา</label><select id="vK">${opts}</select>
+      <label>ผู้รับเหมาที่เข้าจริง (เจ้าเดิม หรือพิมพ์ชื่อเจ้าอื่น)</label><input id="vV" list="vendors">
       <label>วันที่เข้าจริง</label><input id="vD" type="date" value="${today}">
       <label>เข้าตรงตามนัดหรือไม่</label><select id="vO"><option>ตรงตามนัด</option><option>ไม่ตรงตามนัด</option><option>ไม่ได้นัดล่วงหน้า</option></select>
       <label>ช่างผู้รับเหมา (ชื่อหัวหน้าทีม)</label><input id="vTe">
@@ -435,11 +437,13 @@ function recordHtml(C, steps, confirm){
       <label>ขั้นตอน</label><select id="pS">${steps.map(s=>`<option>${s}</option>`).join("")}</select>
       <label>วันที่</label><input id="pD" type="date" value="${today}">
       <label>เลขที่เอกสาร (PR / PO / ใบเสนอราคา)</label><input id="pN">
-      <label>ผู้ขาย / ผู้เสนอราคา</label><input id="pV" placeholder="ใบเสนอราคา 3 เจ้า: บันทึกทีละเจ้า">
+      <label>ผู้ขาย / ผู้เสนอราคา (เจ้าเดิม หรือเจ้าใหม่)</label><input id="pV" list="vendors" placeholder="ใบเสนอราคา 3 เจ้า: บันทึกทีละเจ้า · ขั้น PO: ใส่ผู้รับเหมาที่ได้งาน">
       <label>ราคา (บาท)</label><input id="pP" inputmode="decimal">
       <label>หมายเหตุ</label><input id="pR">
       <label>ผู้บันทึก</label><input id="pB" value="${esc(me)}">
-      <button class="btn" id="pSave">บันทึก</button><div class="msg" id="pM"></div></div></div>`;
+      <button class="btn" id="pSave">บันทึก</button><div class="msg" id="pM"></div>
+      <p class="muted">ถ้าออก PO ให้ผู้รับเหมาเจ้าใหม่ หน้าทะเบียนสัญญาจะแสดงชื่อเจ้าใหม่ทันที แล้วควรแก้ชื่อผู้รับเหมาและวันที่สัญญาในไฟล์ทะเบียนสัญญาของโรงให้ตรง</p></div></div>
+    <datalist id="vendors">${[...new Set(C.map(c => c.vendor).filter(Boolean))].sort().map(v => `<option value="${esc(v)}">`).join("")}</datalist>`;
   const keep = v => { try { if (v) localStorage.setItem("pmma-by", v); } catch(e) {} };
   const go = async (btn, msg, fn, data) => {
     btn.disabled = true; $(msg).className = "msg"; $(msg).textContent = "กำลังบันทึก…";
@@ -448,10 +452,11 @@ function recordHtml(C, steps, confirm){
     btn.disabled = false;
   };
   const nextMonth = c => (c.nextDue || "").slice(0,7);
-  $("aK").onchange = () => { const c = live[$("aK").value]; if (nextMonth(c)) $("aM").value = nextMonth(c); };
-  $("aK").onchange();
-  $("aSave").onclick = () => { const c = live[$("aK").value]; go($("aSave"), "aMsg", "apptAdd", { key:c.key, vendor:c.vendor, month:$("aM").value, date:$("aD").value, status:$("aS").value, newDate:$("aN").value, ref:$("aR").value, note:$("aT").value, by:$("aB").value }); };
-  $("vS").onclick = () => { const c = live[$("vK").value]; go($("vS"), "vM", "visitAdd", { key:c.key, vendor:c.vendor, date:$("vD").value, detail:$("vT").value, result:$("vR").value, link:$("vL").value, by:$("vB").value, onTime:$("vO").value, tech:$("vTe").value, techN:$("vN").value, problem:$("vP").value, quote:$("vQ").value, sup:$("vSu").value }); };
+  $("aK").onchange = () => { const c = live[$("aK").value]; $("aV").value = c.vendor || ""; if (nextMonth(c)) $("aM").value = nextMonth(c); };
+  $("vK").onchange = () => { $("vV").value = live[$("vK").value].vendor || ""; };
+  $("aK").onchange(); $("vK").onchange();
+  $("aSave").onclick = () => { const c = live[$("aK").value]; go($("aSave"), "aMsg", "apptAdd", { key:c.key, vendor:$("aV").value || c.vendor, month:$("aM").value, date:$("aD").value, status:$("aS").value, newDate:$("aN").value, ref:$("aR").value, note:$("aT").value, by:$("aB").value }); };
+  $("vS").onclick = () => { const c = live[$("vK").value]; go($("vS"), "vM", "visitAdd", { key:c.key, vendor:$("vV").value || c.vendor, date:$("vD").value, detail:$("vT").value, result:$("vR").value, link:$("vL").value, by:$("vB").value, onTime:$("vO").value, tech:$("vTe").value, techN:$("vN").value, problem:$("vP").value, quote:$("vQ").value, sup:$("vSu").value }); };
   $("pSave").onclick = () => { const c = live[$("pK").value]; go($("pSave"), "pM", "procAdd", { key:c.key, vendor:c.vendor, step:$("pS").value, date:$("pD").value, doc:$("pN").value, seller:$("pV").value, price:$("pP").value, note:$("pR").value, by:$("pB").value }); };
 }
 
