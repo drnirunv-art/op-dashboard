@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>กรอกข้อมูล PM MA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --bg:#f3f6f7; --panel:#ffffff; --fg:#14262c; --muted:#5b6f76; --line:#d6e0e3;
+  --accent:#0f7c9c; --accent-ink:#ffffff; --head:#ffe600; --head-ink:#1d1d00; --warn:#FF9800;
+  --shadow:0 10px 30px rgba(20,38,44,.10);
+  --f-body:"IBM Plex Sans Thai",system-ui,"Leelawadee UI",Tahoma,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0e1719; --panel:#162326; --fg:#e4eef0; --muted:#94a9af; --line:#2a3b3f;
+  --accent:#3fb3d3; --accent-ink:#04212a; --head:#d9c400; --shadow:0 10px 30px rgba(0,0,0,.4); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1719; --panel:#162326; --fg:#e4eef0; --muted:#94a9af; --line:#2a3b3f;
+  --accent:#3fb3d3; --accent-ink:#04212a; --head:#d9c400; --shadow:0 10px 30px rgba(0,0,0,.4); color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.5}
+a{color:var(--accent)}
+.wrap{max-width:980px;margin:0 auto;padding:16px}
+h1{font-size:24px;margin:8px 0 2px}
+.muted{color:var(--muted)}
+.card{background:var(--panel);border-radius:14px;box-shadow:var(--shadow);padding:18px;margin:14px 0}
+h2{font-size:18px;margin:0 0 10px}
+select{font:inherit;color:inherit;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:17px;width:100%;max-width:420px}
+.btns{display:flex;flex-wrap:wrap;gap:12px;margin-top:14px}
+.btn{display:flex;flex-direction:column;gap:2px;min-width:240px;flex:1;text-decoration:none;background:var(--accent);color:var(--accent-ink);border-radius:12px;padding:14px 16px;font-weight:600;font-size:17px}
+.btn small{font-weight:400;font-size:13px;opacity:.9}
+.btn.off{opacity:.45;pointer-events:none}
+.note{border-left:4px solid var(--warn);padding:6px 10px;margin:10px 0 0;background:color-mix(in srgb,var(--warn) 10%,transparent)}
+.tscroll{overflow-x:auto}
+table{border-collapse:separate;border-spacing:3px;width:100%}
+th{background:var(--head);color:var(--head-ink);border-radius:6px;padding:7px 8px;font-size:13px;text-align:left}
+td{padding:6px 8px;border-bottom:1px solid var(--line);font-size:14px}
+ol{padding-left:20px;margin:6px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>กรอกข้อมูล PM MA (Google Sheet)</h1>
+  <p class="muted">เลือกโรงพยาบาล แล้วกดปุ่มเพื่อเปิด Google Sheet ของโรงนั้น · ข้อมูลที่กรอกจะขึ้นบน <a href="./">Dashboard PM MA</a> เมื่อเปิด Dashboard ใหม่</p>
+
+  <div class="card">
+    <h2>1. เลือกโรงพยาบาล</h2>
+    <select id="h" aria-label="เลือกโรงพยาบาล"></select>
+    <div class="btns" id="btns"></div>
+    <div id="hnote"></div>
+  </div>
+
+  <div class="card">
+    <h2>ต้องกรอกอะไร</h2>
+    <ol>
+      <li><b>ทะเบียนสัญญา MA</b> หนึ่งแถว = หนึ่งสัญญา ช่องที่ต้องมี: ผู้รับเหมา, วันเริ่มสัญญา, วันสิ้นสุดสัญญา (ค.ศ. เช่น 31/10/2026), รอบเข้า PM (M, 2M, Q, 4M, S, Y) และ <b>กลุ่มงาน</b> (เลือก 1–5)</li>
+      <li><b>ทะเบียน Email</b> ผู้รับอีเมลแจ้งเตือนของโรง: ชื่อ, ตำแหน่ง, อีเมล, To/CC, ติ๊ก ✓ อีเมลที่ต้องการรับ และใช้งาน Y/N</li>
+    </ol>
+    <p class="muted" style="margin:6px 0 0">ไม่ต้องลบหรือเปลี่ยนชื่อชีต และไม่ต้องแก้แถวหัวตาราง</p>
+  </div>
+
+  <div class="card">
+    <h2>ลิงก์ทั้ง 12 โรง</h2>
+    <div class="tscroll"><table><thead><tr><th>โรงพยาบาล</th><th>ทะเบียนสัญญา MA</th><th>ทะเบียน Email</th></tr></thead><tbody id="all"></tbody></table></div>
+    <p style="margin:12px 0 0">ผู้บริหาร 12 โรง: <a id="exec" target="_blank" rel="noopener">ทะเบียน Email ผู้บริหาร</a></p>
+  </div>
+</div>
+<script>
+const G = id => `https://docs.google.com/spreadsheets/d/${id}/edit`;
+/* [รหัส, ชื่อ, ทะเบียนสัญญา, ทะเบียน Email, ยังไม่มีข้อมูลสัญญา] */
+const H = [
+  ["PT2","โรงพยาบาลพญาไท 2","1QleW21IDFVdVI8XuTUnuujx5g2pQiqQbQFsTJDzb07I","1IUsBNui-9nlEDmMJQ6AyUHm4BlFL7zcDaJQCGcvyCgU"],
+  ["PLC","โรงพยาบาลเปาโล โชคชัย 4","198JJuyLHpecbrFeItAj4ZY9ZsPDRkP5__DKQrfG2A4Q","17FQw1KdY5Knt_HQnj-vI_RSbzKAs2tWESgNSZiFQJ2M",1],
+  ["PLD","โรงพยาบาลเปาโล พระประแดง","11xupwhM3tNW3UrhBAh2Xjg5ke5FQAQEiopqNDsx2dCk","106YFyfPC-xol1BBFVbC280py4gdmztMUQJ7OUZFMCLk"],
+  ["PLK","โรงพยาบาลเปาโล เกษตร","1Xp489-9WhZGUtO10BsFC6etAVNEVYwzZoMmmJxwW4JY","1cp96XcKKWonUrPnR_eGeSL-HefcSFxjrw-67UvZuBVs",1],
+  ["PLR","โรงพยาบาลเปาโล รังสิต","1Q8DKtnjmq0ingmQeV_pwMxd8DTjf0PoMgiJz90YXwY8","1_-fYH0j6HM3Z-UJcq2knOCeCeB8tK3pIccXyxPxg-6g"],
+  ["PLS","โรงพยาบาลเปาโล สมุทรปราการ","170y0UF5Rjgml1UnzojgdQuYc4WOKL5hh6ZVc7rNQEMk","11SgYnyh9V-r38_vH3dwx2iXKZQNUNo3FtmFXJHXWmFI",1],
+  ["PT1","โรงพยาบาลพญาไท 1","1EoLh5hQjo7nlX4R57QJSgn_HInAfIk_K7BKjFcZ14B8","1wFTg3418PG2H1ZfQlIX4q82pm4ziThBslUS_I-Uo5-s"],
+  ["PT3","โรงพยาบาลพญาไท 3","1dwMMgD-KSadiYIxfGucK7bLcvRGC9iD7xB1DTLc_esQ","1SEG4b5aa6peHPrlCC4i__3jgulG3T1uGntfnQcYz224"],
+  ["PTN","โรงพยาบาลพญาไท นวมินทร์","16F3xFIsD5A1ju3HJB7kONjkr7ceqh0iLm45EoUytqGQ","164VOPwCmWcXyVyg8RnzhEfb14VwddLbql_tudiN-j9A"],
+  ["PTP","โรงพยาบาลพญาไท พหลโยธิน","1AR3wskTeZ4aOkwcSmbF8UgyO4IbAJLzZd55OkgLMi8M","1DPrmg2YP0fa217FKxdA0hZcKLgU7yP2aVs01u1QnAKc"],
+  ["PTS","โรงพยาบาลพญาไท ศรีราชา","12GPGaMUgSp1zKUEFpxllD9IQ6pd-q1J49ytnnj3m2cQ","1aOnihdYYji_hZFjG7Aq_u04eHa6h-qETbDQ6D1vx2aA"],
+  ["PTW","โรงพยาบาลพญาไท บ่อวิน","1GBoPfPZghuLGfbbUopci94QjmEvfrVHRVfeRBEd1Iok","16mBaRzqyL-dZQ0OZn_UX-16oOaE1V_yiQHrBkfdCU6E"]
+];
+const EXEC = "1dK-pFBu44AYYdq_RBWsxR1j91GtICLLaW3bdaV3YeXE";
+const $ = id => document.getElementById(id);
+const sel = $("h");
+sel.innerHTML = `<option value="">— เลือกโรงพยาบาล —</option>` + H.map(h => `<option value="${h[0]}">${h[1]} (${h[0]})</option>`).join("");
+function show(code){
+  const h = H.find(x => x[0] === code);
+  $("btns").innerHTML = h
+    ? `<a class="btn" href="${G(h[2])}" target="_blank" rel="noopener">ทะเบียนสัญญา MA<small>${h[1]}</small></a><a class="btn" href="${G(h[3])}" target="_blank" rel="noopener">ทะเบียน Email<small>ผู้รับอีเมลแจ้งเตือน ${h[0]}</small></a>`
+    : `<span class="btn off">ทะเบียนสัญญา MA<small>เลือกโรงก่อน</small></span><span class="btn off">ทะเบียน Email<small>เลือกโรงก่อน</small></span>`;
+  $("hnote").innerHTML = h && h[4] ? `<p class="note">โรงนี้ยังไม่มีข้อมูลสัญญา MA เลย ต้องกรอกทะเบียนสัญญาทั้งหมด</p>` : "";
+  try { code ? localStorage.setItem("pmma-sheet", code) : localStorage.removeItem("pmma-sheet"); } catch (e) {}
+  const u = new URL(location.href); code ? u.searchParams.set("p", code.toLowerCase()) : u.searchParams.delete("p"); history.replaceState(null, "", u);
+}
+sel.onchange = () => show(sel.value);
+let start = (new URLSearchParams(location.search).get("p") || "").toUpperCase();
+if (!start) try { start = localStorage.getItem("pmma-sheet") || ""; } catch (e) {}
+if (H.some(h => h[0] === start)) sel.value = start; else start = "";
+show(start);
+$("all").innerHTML = H.map(h => `<tr><td>${h[1]}${h[4] ? ` <small class="muted">· ยังไม่มีข้อมูล</small>` : ""}</td><td><a href="${G(h[2])}" target="_blank" rel="noopener">เปิด</a></td><td><a href="${G(h[3])}" target="_blank" rel="noopener">เปิด</a></td></tr>`).join("");
+$("exec").href = G(EXEC);
+</script>
+</body>
+</html>
