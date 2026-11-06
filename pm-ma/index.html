@@ -13,17 +13,17 @@
   --accent:#0f7c9c; --accent-ink:#ffffff; --head:#ffe600; --head-ink:#1d1d00;
   --shadow:0 10px 30px rgba(20,38,44,.10);
   --ok:#92D050; --ok-ink:#173d00; --bad:#FF0000; --bad-ink:#ffffff;
-  --miss:#FF9800; --miss-ink:#2b1700; --part:#FFE082; --part-ink:#3d2e00; --none:#e6ecee; --none-ink:#6a7c82;
+  --miss:#FF9800; --miss-ink:#2b1700; --part:#FFE082; --part-ink:#3d2e00; --none:#e6ecee; --none-ink:#6a7c82; --plan:#d8ecf5; --plan-ink:#0b3a4c;
   --f-body:"IBM Plex Sans Thai",system-ui,"Leelawadee UI",Tahoma,sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#0e1719; --panel:#162326; --fg:#e4eef0; --muted:#94a9af; --line:#2a3b3f;
-  --accent:#3fb3d3; --accent-ink:#04212a; --head:#d9c400; --none:#22333a; --none-ink:#94a9af;
+  --accent:#3fb3d3; --accent-ink:#04212a; --head:#d9c400; --none:#22333a; --none-ink:#94a9af; --plan:#1d3d4a; --plan-ink:#cfe9f3;
   --shadow:0 10px 30px rgba(0,0,0,.4); color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0e1719; --panel:#162326; --fg:#e4eef0; --muted:#94a9af; --line:#2a3b3f;
-  --accent:#3fb3d3; --accent-ink:#04212a; --head:#d9c400; --none:#22333a; --none-ink:#94a9af;
+  --accent:#3fb3d3; --accent-ink:#04212a; --head:#d9c400; --none:#22333a; --none-ink:#94a9af; --plan:#1d3d4a; --plan-ink:#cfe9f3;
   --shadow:0 10px 30px rgba(0,0,0,.4); color-scheme:dark}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.45}
@@ -57,6 +57,10 @@ td.name small{display:block;font-weight:400}
 .s-ok{background:var(--ok);color:var(--ok-ink)} .s-bad{background:var(--bad);color:var(--bad-ink)}
 .s-miss{background:var(--miss);color:var(--miss-ink)} .s-part{background:var(--part);color:var(--part-ink)}
 .s-none{background:var(--none);color:var(--none-ink)}
+.s-watch{background:#FFD600;color:#3d3300} .s-plan{background:var(--plan);color:var(--plan-ink)}
+td.lbl{font-size:12px;color:var(--muted);text-align:center;white-space:nowrap;background:transparent}
+table.pva tr.pv-bot td{padding-bottom:7px} table.pva tr.pv-top td.n{border-bottom:2px solid var(--panel)}
+table.pva tbody tr.pv-top td{border-top:6px solid transparent}
 .pill{display:inline-block;border-radius:99px;padding:1px 9px;font-size:12px;font-weight:600;white-space:nowrap}
 .steps span{display:inline-block;margin:1px 4px 1px 0;font-size:12px;white-space:nowrap}
 .steps .y{color:var(--ok-ink);background:var(--ok);border-radius:5px;padding:0 5px}
@@ -153,6 +157,12 @@ async function overview(){
       <div class="kpi"><b>${visitM} / ${plannedM.toLocaleString()}</b><span>เข้า PM เดือนนี้ / งานตามตาราง MA</span></div>
     </div>
     <div class="card">
+      <h2>แผนเทียบผลจริงรายเดือน ปี ${d.year} (นับเป็นจำนวนสัญญา)</h2>
+      <div class="legend"><span><i style="--c:var(--plan)"></i>แผน: สัญญาที่ต้องเข้า PM ในเดือนนั้น</span><span><i style="--c:var(--ok)"></i>เข้าครบตามแผน</span><span><i style="--c:#FFD600"></i>เฝ้าระวัง: มี PO และเข้าจริง แต่ไม่ตรงเดือน</span><span><i style="--c:var(--bad)"></i>ไม่ได้เข้าตามแผน</span><span><i style="--c:var(--none)"></i>ยังไม่ถึง / ไม่มีแผน</span></div>
+      <div class="tscroll" id="pva"><div class="loading">กำลังโหลดข้อมูลสัญญา 12 โรง…</div></div>
+      <p class="foot">ชี้ที่ช่องเพื่อดูรายชื่อสัญญา · แผนคำนวณจากวันเริ่มสัญญาและรอบเข้า PM ในทะเบียนสัญญา · ผลจริงจากการบันทึกการเข้า PM</p>
+    </div>
+    <div class="card">
       <h2>รายงานรายเดือนทั้งปี ${d.year} — 12 โรง</h2>
       <div class="tabs"><button data-v="plan">งานตามตาราง MA</button><button data-v="visit">ผู้รับเหมาเข้า PM จริง</button></div>
       <div class="legend" id="gridLegend"></div>
@@ -167,6 +177,64 @@ async function overview(){
     </div>`;
   document.querySelectorAll("[data-v]").forEach(b => b.onclick = () => { view = b.dataset.v; draw(); });
   draw();
+  planVsActual().catch(e => { $("pva").innerHTML = `<div class="msg err">โหลดไม่สำเร็จ: ${esc(e.message)}</div>`; });
+}
+
+/* ---------- แผน vs ผลจริง (ระดับสัญญา) ---------- */
+const IV = { M:1, "1M":1, "2M":2, Q:3, "3M":3, "4M":4, S:6, "6M":6, Y:12, "12M":12 };
+const ymd = s => { if (!s) return null; const [y,m,d] = String(s).slice(0,10).split("-").map(Number); return y ? new Date(y, (m||1)-1, d||1) : null; };
+function pvaHospital(cs, Y){
+  const plan = MONTHS.map(() => []), act = MONTHS.map(() => new Set()), st = MONTHS.map(() => ({ ok:[], watch:[], miss:[], wait:[] }));
+  cs.forEach(c => {
+    if (c.status === "ยกเลิก") return;
+    const name = c.sys + (c.scope ? " — " + c.scope : "") + (c.vendor ? " (" + c.vendor + ")" : "");
+    const vm = new Set((c.visits || []).map(v => ymd(v.date)).filter(d => d && d.getFullYear() === Y).map(d => d.getMonth()));
+    vm.forEach(m => act[m].add(name));
+    const iv = IV[String(c.freq || "").toUpperCase()]; if (!iv) return;
+    let s = ymd(c.start), e = ymd(c.end);
+    if (!s && e) s = new Date(e.getFullYear() - 1, e.getMonth(), e.getDate() + 1);
+    if (!s) return;
+    if (!e) e = new Date(s.getFullYear() + 1, s.getMonth(), s.getDate() - 1);
+    const hasPO = c.poDone || c.status === "ยังมีผล" || c.status === "ใกล้หมด", win = Math.max(1, Math.ceil(iv / 2));
+    const pm = [];
+    for (let k = 0; ; k += iv) {
+      const d = new Date(s.getFullYear(), s.getMonth() + k, 1);
+      if (d > e || d.getFullYear() > Y) break;
+      if (d.getFullYear() === Y) pm.push(d.getMonth());
+    }
+    const spare = [...vm].filter(x => !pm.includes(x));   // เข้าจริงในเดือนที่ไม่มีแผน
+    pm.forEach(m => {
+      plan[m].push(name);
+      if (vm.has(m)) return st[m].ok.push(name);
+      const j = hasPO ? spare.findIndex(x => Math.abs(x - m) <= win) : -1;
+      if (j >= 0) { spare.splice(j, 1); return st[m].watch.push(name); }
+      if (m >= nowM) return st[m].wait.push(name);
+      st[m].miss.push(name);
+    });
+  });
+  return { plan, act, st };
+}
+async function planVsActual(){
+  const Y = new Date().getFullYear();
+  const all = await Promise.all(HOSP.map(([c]) => api({ api: "hospital", p: c }).catch(e => ({ code: c, error: e.message }))));
+  const tip = (h, a) => esc(a.length ? h + "\n• " + a.join("\n• ") : h);
+  const rows = all.map((h, i) => {
+    const [code, nm] = HOSP[i];
+    if (h.error || !h.contracts) return `<tr><td class="name" rowspan="2">${esc(nm)}</td><td class="lbl">แผน</td><td class="n s-none" colspan="13">โหลดไม่ได้</td></tr><tr><td class="lbl">จริง</td><td class="n s-none" colspan="13"></td></tr>`;
+    const r = pvaHospital(h.contracts, Y);
+    const pc = r.plan.map((a, m) => `<td class="n ${a.length ? "s-plan" : "s-none"}" title="${tip("แผน " + MONTHS[m], a)}">${a.length || "-"}</td>`).join("");
+    const ac = r.act.map((set, m) => {
+      const S = r.st[m], n = set.size, planned = r.plan[m].length;
+      let cls = "s-none";
+      if (S.miss.length) cls = "s-bad"; else if (S.watch.length) cls = "s-watch";
+      else if (planned && S.ok.length === planned) cls = "s-ok"; else if (!planned && n && m <= nowM) cls = "s-ok";
+      const t = [MONTHS[m] + " เข้าจริง " + n + " สัญญา"].concat(S.miss.map(x => "✗ ไม่ได้เข้า: " + x), S.watch.map(x => "! ไม่ตรงเดือน: " + x), S.wait.map(x => "… รอเข้า: " + x)).join("\n");
+      return `<td class="n ${cls}" title="${esc(t)}">${m > nowM && !n ? "" : n}</td>`;
+    }).join("");
+    const tp = r.plan.reduce((a, x) => a + x.length, 0), ta = r.act.reduce((a, x) => a + x.size, 0);
+    return `<tr class="pv-top"><td class="name" rowspan="2"><a href="?p=${code.toLowerCase()}">${esc(nm)}</a><small>${h.contracts.length} สัญญา</small></td><td class="lbl">แผน</td>${pc}<td class="n"><b>${tp}</b></td></tr><tr class="pv-bot"><td class="lbl">จริง</td>${ac}<td class="n"><b>${ta}</b></td></tr>`;
+  }).join("");
+  $("pva").innerHTML = `<table class="month pva"><thead><tr><th>โรงพยาบาล</th><th></th>${MONTHS.map(m => `<th>${m}</th>`).join("")}<th>รวม</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 /* ---------- รายโรง ---------- */
