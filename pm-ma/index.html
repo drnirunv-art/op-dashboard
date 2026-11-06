@@ -144,10 +144,6 @@ async function overview(){
       <div class="tabs" id="gtabs"></div>
       <div id="gdesc" class="muted" style="margin:-6px 0 10px"></div>
       <div id="gmatrix"></div>
-      <h3 class="sub">แผนเทียบผลจริงรายเดือน (นับเป็นจำนวนสัญญา)</h3>
-      <div class="legend"><span><i style="--c:var(--plan)"></i>แผน: สัญญาที่ต้องเข้า PM ในเดือนนั้น</span><span><i style="--c:var(--ok)"></i>เข้าครบตามแผน</span><span><i style="--c:#FFD600"></i>เฝ้าระวัง: มี PO และเข้าจริง แต่ไม่ตรงเดือน</span><span><i style="--c:var(--bad)"></i>ไม่ได้เข้าตามแผน</span><span><i style="--c:var(--none)"></i>ยังไม่ถึง / ไม่มีแผน</span><span>✓ ผู้รับเหมายืนยันนัดแล้ว · ⏳ รอตอบ · ⚠ ขอเลื่อน/ไม่เข้า</span></div>
-      <div class="tscroll" id="pva"><div class="loading">กำลังโหลดข้อมูลสัญญา 12 โรง…</div></div>
-      <p class="foot">ชี้ที่ช่องเพื่อดูรายชื่อสัญญา · แผนคำนวณจากวันเริ่มสัญญาและรอบเข้า PM ในทะเบียนสัญญา · ผลจริงจากการบันทึกการเข้า PM</p>
     </div>
     <div class="card">
       <h2>สถานะสัญญา MA รายโรง</h2>
@@ -155,6 +151,12 @@ async function overview(){
       ${H.map(h => `<tr><td class="name"><a href="?p=${h.code.toLowerCase()}">${esc(h.name)}</a></td><td class="n">${h.contracts}</td><td class="n ${h.active?"s-ok":""}">${h.active}</td><td class="n ${h.soon?"s-miss":""}">${h.soon}</td><td class="n ${h.expired?"s-bad":""}">${h.expired}</td><td class="n ${h.noDate?"s-none":""}">${h.noDate}</td><td class="n ${h.renew?"s-part":""}">${h.renew}</td><td class="n ${h.overdue?"s-miss":""}">${h.overdue}</td></tr>`).join("")}
       </tbody></table></div>
       <p class="foot">อัปเดต ${esc(d.generated)} · ข้อมูลจากโฟลเดอร์ PM MA Master plan ใน Google Drive</p>
+    </div>
+    <div class="card">
+      <h2>แผนเทียบผลจริงรายเดือน (นับเป็นจำนวนสัญญา) <small id="pvaG" class="muted"></small></h2>
+      <div class="legend"><span><i style="--c:var(--plan)"></i>แผน: สัญญาที่ต้องเข้า PM ในเดือนนั้น</span><span><i style="--c:var(--ok)"></i>เข้าครบตามแผน</span><span><i style="--c:#FFD600"></i>เฝ้าระวัง: มี PO และเข้าจริง แต่ไม่ตรงเดือน</span><span><i style="--c:var(--bad)"></i>ไม่ได้เข้าตามแผน</span><span><i style="--c:var(--none)"></i>ยังไม่ถึง / ไม่มีแผน</span><span>✓ ผู้รับเหมายืนยันนัดแล้ว · ⏳ รอตอบ · ⚠ ขอเลื่อน/ไม่เข้า</span></div>
+      <div class="tscroll" id="pva"><div class="loading">กำลังโหลดข้อมูลสัญญา 12 โรง…</div></div>
+      <p class="foot">ชี้ที่ช่องเพื่อดูรายชื่อสัญญา · แผนคำนวณจากวันเริ่มสัญญาและรอบเข้า PM ในทะเบียนสัญญา · ผลจริงจากการบันทึกการเข้า PM</p>
     </div>
     <div class="card">
       <h2>แผนงาน PM รายเดือนทั้งปี ${d.year} — 12 โรง (สัญญา / เครื่อง)</h2>
@@ -341,6 +343,7 @@ async function groupDash(SUM){
     $("gdesc").textContent = g ? g.desc : "รวมทุกสัญญา เลือกกลุ่มด้านบนเพื่อดูสถานะสัญญาแยกตามรายการของแต่ละโรง · กลุ่มอ่านจากคอลัมน์ \"กลุ่มงาน\" ในทะเบียนสัญญาของแต่ละโรง (แก้ในไฟล์ได้)";
     $("gmatrix").innerHTML = g ? matrixHtml(g, all) : "";
     $("pva").innerHTML = pvaHtml(all, Y, gid);
+    $("pvaG").textContent = g ? "— " + g.name : "— ทุกกลุ่ม";
   };
   draw();
   $("grid").innerHTML = comboHtml(all, SUM || [], Y);
