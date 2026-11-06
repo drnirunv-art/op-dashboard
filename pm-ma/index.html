@@ -153,15 +153,15 @@ async function overview(){
       <p class="foot">อัปเดต ${esc(d.generated)} · ข้อมูลจากโฟลเดอร์ PM MA Master plan ใน Google Drive</p>
     </div>
     <div class="card">
+      <h2>แผนงาน PM รายเดือนทั้งปี ${d.year} — 12 โรง (สัญญา / เครื่อง)</h2>
+      <div class="legend" id="gridLegend"></div>
+      <div class="tscroll" id="grid"></div>
+    </div>
+    <div class="card">
       <h2>แผนเทียบผลจริงรายเดือน (นับเป็นจำนวนสัญญา) <small id="pvaG" class="muted"></small></h2>
       <div class="legend"><span><i style="--c:var(--plan)"></i>แผน: สัญญาที่ต้องเข้า PM ในเดือนนั้น</span><span><i style="--c:var(--ok)"></i>เข้าครบตามแผน</span><span><i style="--c:#FFD600"></i>เฝ้าระวัง: มี PO และเข้าจริง แต่ไม่ตรงเดือน</span><span><i style="--c:var(--bad)"></i>ไม่ได้เข้าตามแผน</span><span><i style="--c:var(--none)"></i>ยังไม่ถึง / ไม่มีแผน</span><span>✓ ผู้รับเหมายืนยันนัดแล้ว · ⏳ รอตอบ · ⚠ ขอเลื่อน/ไม่เข้า</span></div>
       <div class="tscroll" id="pva"><div class="loading">กำลังโหลดข้อมูลสัญญา 12 โรง…</div></div>
       <p class="foot">ชี้ที่ช่องเพื่อดูรายชื่อสัญญา · แผนคำนวณจากวันเริ่มสัญญาและรอบเข้า PM ในทะเบียนสัญญา · ผลจริงจากการบันทึกการเข้า PM</p>
-    </div>
-    <div class="card">
-      <h2>แผนงาน PM รายเดือนทั้งปี ${d.year} — 12 โรง (สัญญา / เครื่อง)</h2>
-      <div class="legend" id="gridLegend"></div>
-      <div class="tscroll" id="grid"></div>
     </div>
 `;
   $("grid").innerHTML = `<div class="loading">กำลังโหลด…</div>`;
