@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>PM MA 12 โรงพยาบาล</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+:root{
+  --bg:#f3f6f7; --panel:#ffffff; --fg:#14262c; --muted:#5b6f76; --line:#d6e0e3;
+  --accent:#0f7c9c; --accent-ink:#ffffff; --head:#ffe600; --head-ink:#1d1d00;
+  --shadow:0 10px 30px rgba(20,38,44,.10);
+  --ok:#92D050; --ok-ink:#173d00; --bad:#FF0000; --bad-ink:#ffffff;
+  --miss:#FF9800; --miss-ink:#2b1700; --part:#FFE082; --part-ink:#3d2e00; --none:#e6ecee; --none-ink:#6a7c82;
+  --f-body:"IBM Plex Sans Thai",system-ui,"Leelawadee UI",Tahoma,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0e1719; --panel:#162326; --fg:#e4eef0; --muted:#94a9af; --line:#2a3b3f;
+  --accent:#3fb3d3; --accent-ink:#04212a; --head:#d9c400; --none:#22333a; --none-ink:#94a9af;
+  --shadow:0 10px 30px rgba(0,0,0,.4); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1719; --panel:#162326; --fg:#e4eef0; --muted:#94a9af; --line:#2a3b3f;
+  --accent:#3fb3d3; --accent-ink:#04212a; --head:#d9c400; --none:#22333a; --none-ink:#94a9af;
+  --shadow:0 10px 30px rgba(0,0,0,.4); color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.45}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--accent)}
+.wrap{max-width:1400px;margin:0 auto;padding:16px}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:10px 20px;margin-bottom:14px}
+header h1{margin:0;font-size:clamp(1.2rem,2.4vw,1.6rem)}
+header p{margin:0;color:var(--muted);font-size:14px}
+.ctrl{display:flex;flex-wrap:wrap;gap:8px;margin-left:auto;align-items:center}
+select,input,textarea{border:1px solid var(--line);background:var(--panel);border-radius:9px;padding:7px 10px}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:14px;width:max-content;max-width:100%}
+.tabs button{border:0;background:none;padding:8px 14px;border-radius:9px;font-weight:600;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
+.card{background:var(--panel);border-radius:12px;box-shadow:var(--shadow);padding:16px;margin-bottom:16px}
+.card h2{margin:0 0 10px;font-size:1.05rem}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.kpi{background:var(--panel);border-radius:12px;box-shadow:var(--shadow);padding:12px 14px}
+.kpi b{display:block;font-size:1.6rem;font-family:var(--f-mono)}
+.kpi span{color:var(--muted);font-size:13px}
+.kpi.bad b{color:var(--bad)} .kpi.warn b{color:var(--miss)}
+.tscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{border-collapse:separate;border-spacing:3px;width:100%}
+th{font-size:12.5px;font-weight:600;color:var(--head-ink);background:var(--head);border-radius:6px;padding:5px 6px;text-align:center}
+td{border-radius:6px;padding:6px;font-size:13.5px;vertical-align:top;background:var(--bg)}
+td.n{text-align:center;font-family:var(--f-mono);white-space:nowrap}
+td.name{white-space:nowrap;font-weight:600;position:sticky;left:0;background:var(--panel);z-index:1}
+td.name a{color:inherit;text-decoration:none} td.name a:hover{text-decoration:underline}
+td small,.muted{color:var(--muted);font-size:12px}
+td.name small{display:block;font-weight:400}
+.s-ok{background:var(--ok);color:var(--ok-ink)} .s-bad{background:var(--bad);color:var(--bad-ink)}
+.s-miss{background:var(--miss);color:var(--miss-ink)} .s-part{background:var(--part);color:var(--part-ink)}
+.s-none{background:var(--none);color:var(--none-ink)}
+.pill{display:inline-block;border-radius:99px;padding:1px 9px;font-size:12px;font-weight:600;white-space:nowrap}
+.steps span{display:inline-block;margin:1px 4px 1px 0;font-size:12px;white-space:nowrap}
+.steps .y{color:var(--ok-ink);background:var(--ok);border-radius:5px;padding:0 5px}
+.steps .n{color:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--muted);margin:0 0 10px}
+.legend i{display:inline-block;width:13px;height:13px;border-radius:3px;vertical-align:-2px;margin-right:5px;background:var(--c)}
+.month td.n{min-width:52px}
+.month td.n b{display:block;font-size:14px}
+.forms{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.forms label{display:block;font-size:13px;color:var(--muted);margin:8px 0 3px}
+.forms input,.forms select,.forms textarea{width:100%}
+.btn{border:0;background:var(--accent);color:var(--accent-ink);border-radius:9px;padding:9px 16px;font-weight:600;cursor:pointer;margin-top:12px}
+.msg{margin-top:8px;font-size:14px} .msg.ok{color:#2e7d32} .msg.err{color:#c62828}
+.loading{color:var(--muted);padding:20px 4px}
+.plan td{white-space:nowrap} .plan td.m{text-align:center;font-family:var(--f-mono);min-width:34px}
+.plan td.m.on{background:var(--part);color:var(--part-ink);font-weight:600}
+.plan td.m.now{outline:2px solid var(--accent)}
+.foot{color:var(--muted);font-size:12.5px;margin-top:6px}
+@media (max-width:640px){.wrap{padding:12px} td{font-size:12.5px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1 id="title">PM MA 12 โรงพยาบาล</h1>
+      <p id="sub">ติดตามสัญญาจ้างบำรุงรักษา (MA) และการเข้า PM ของผู้รับเหมา</p>
+    </div>
+    <div class="ctrl">
+      <select id="hosp" aria-label="เลือกโรงพยาบาล"></select>
+    </div>
+  </header>
+  <div id="app"><div class="loading">กำลังโหลด…</div></div>
+</div>
+<script>
+const API_URL = "PASTE_WEB_APP_URL";
+const HOSP = [["PT2","โรงพยาบาลพญาไท 2"],["PLC","โรงพยาบาลเปาโล โชคชัย 4"],["PLD","โรงพยาบาลเปาโล พระประแดง"],["PLK","โรงพยาบาลเปาโล เกษตร"],["PLR","โรงพยาบาลเปาโล รังสิต"],["PLS","โรงพยาบาลเปาโล สมุทรปราการ"],["PT1","โรงพยาบาลพญาไท 1"],["PT3","โรงพยาบาลพญาไท 3"],["PTN","โรงพยาบาลพญาไท นวมินทร์"],["PTP","โรงพยาบาลพญาไท พหลโยธิน"],["PTS","โรงพยาบาลพญาไท ศรีราชา"],["PTW","โรงพยาบาลพญาไท บ่อวิน"]];
+const MONTHS = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+const qs = new URLSearchParams(location.search);
+const CODE = (qs.get("p") || "").toUpperCase();
+const TOKEN = new URLSearchParams(location.hash.slice(1)).get("t") || "";
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const thd = s => { if (!s) return "-"; const [y,m,d] = s.split("-"); return `${+d}/${+m}/${+y+543}`; };
+const nowM = new Date().getMonth();
+
+async function api(params){
+  if (API_URL.startsWith("PASTE")) throw new Error("ยังไม่ได้ใส่ลิงก์ Web app ของ Apps Script");
+  const r = await fetch(API_URL + "?" + new URLSearchParams(params), { credentials: "omit" });
+  const d = await r.json(); if (d.error) throw new Error(d.error); return d;
+}
+async function post(fn, data){
+  const r = await fetch(API_URL, { method:"POST", credentials:"omit", headers:{"Content-Type":"text/plain;charset=utf-8"}, body: JSON.stringify({ fn, t: TOKEN, code: CODE, data }) });
+  const d = await r.json(); if (d.error) throw new Error(d.error); return d;
+}
+
+/* ---------- เลือกโรง ---------- */
+$("hosp").innerHTML = `<option value="">ภาพรวม 12 โรง</option>` + HOSP.map(([c,n]) => `<option value="${c}" ${c===CODE?"selected":""}>${n}</option>`).join("");
+$("hosp").onchange = e => { const u = new URL(location.href); e.target.value ? u.searchParams.set("p", e.target.value.toLowerCase()) : u.searchParams.delete("p"); u.hash = TOKEN && e.target.value === CODE ? location.hash : ""; location.href = u.toString(); };
+
+const statusCls = s => ({"ยังมีผล":"s-ok","ใกล้หมด":"s-miss","หมดอายุแล้ว":"s-bad","ยังไม่มีวันที่":"s-none","ยกเลิก":"s-none"}[s] || "s-none");
+function dayTxt(c){ if (c.daysLeft == null) return "-"; return c.daysLeft < 0 ? `เกิน ${-c.daysLeft} วัน` : `${c.daysLeft} วัน`; }
+
+/* ---------- ภาพรวม 12 โรง ---------- */
+async function overview(){
+  const d = await api({ api: "summary" });
+  const H = d.hospitals, sum = k => H.reduce((a,h) => a + (h[k]||0), 0);
+  const plannedM = H.reduce((a,h) => a + (h.planned ? h.planned[nowM] : 0), 0);
+  const visitM = H.reduce((a,h) => a + h.visits[nowM], 0);
+  let view = "plan";
+  const draw = () => {
+    const grid = H.map(h => {
+      const cells = MONTHS.map((_,m) => {
+        const p = h.planned ? h.planned[m] : null, v = h.visits[m];
+        if (view === "plan") return `<td class="n ${p ? "s-part" : "s-none"}">${p == null ? "-" : p}</td>`;
+        const cls = m > nowM ? "s-none" : v > 0 ? "s-ok" : (p ? "s-miss" : "s-none");
+        return `<td class="n ${cls}">${v}</td>`;
+      }).join("");
+      const tot = view === "plan" ? (h.planned ? h.planned.reduce((a,b)=>a+b,0) : "-") : h.visits.reduce((a,b)=>a+b,0);
+      return `<tr><td class="name"><a href="?p=${h.code.toLowerCase()}">${esc(h.name)}</a><small>${h.machines == null ? "ยังไม่มี Master plan" : h.machines.toLocaleString() + " เครื่อง"}</small></td>${cells}<td class="n"><b>${tot}</b></td></tr>`;
+    }).join("");
+    $("grid").innerHTML = `<table class="month"><thead><tr><th>โรงพยาบาล</th>${MONTHS.map(m=>`<th>${m}</th>`).join("")}<th>รวม</th></tr></thead><tbody>${grid}</tbody></table>`;
+    $("gridLegend").innerHTML = view === "plan"
+      ? `<span><i style="--c:var(--part)"></i>จำนวนงาน PM ตามตาราง MA (ครั้ง/เดือน)</span>`
+      : `<span><i style="--c:var(--ok)"></i>มีผู้รับเหมาเข้า PM</span><span><i style="--c:var(--miss)"></i>มีงานตามแผนแต่ยังไม่มีบันทึก</span><span><i style="--c:var(--none)"></i>ไม่มีงาน / ยังไม่ถึง</span>`;
+    document.querySelectorAll("[data-v]").forEach(b => b.setAttribute("aria-selected", b.dataset.v === view));
+  };
+  $("app").innerHTML = `
+    <div class="kpis">
+      <div class="kpi"><b>${sum("contracts")}</b><span>สัญญา MA ทั้งหมด</span></div>
+      <div class="kpi warn"><b>${sum("renew")}</b><span>รอต่อสัญญา (≤90 วัน / หมดแล้วยังไม่ PO)</span></div>
+      <div class="kpi bad"><b>${sum("expired")}</b><span>สัญญาหมดอายุแล้ว</span></div>
+      <div class="kpi warn"><b>${sum("overdue")}</b><span>ผู้รับเหมาขาดรอบ PM</span></div>
+      <div class="kpi"><b>${visitM} / ${plannedM.toLocaleString()}</b><span>เข้า PM เดือนนี้ / งานตามตาราง MA</span></div>
+    </div>
+    <div class="card">
+      <h2>รายงานรายเดือนทั้งปี ${d.year} — 12 โรง</h2>
+      <div class="tabs"><button data-v="plan">งานตามตาราง MA</button><button data-v="visit">ผู้รับเหมาเข้า PM จริง</button></div>
+      <div class="legend" id="gridLegend"></div>
+      <div class="tscroll" id="grid"></div>
+    </div>
+    <div class="card">
+      <h2>สถานะสัญญา MA รายโรง</h2>
+      <div class="tscroll"><table><thead><tr><th>โรงพยาบาล</th><th>สัญญาทั้งหมด</th><th>ยังมีผล</th><th>ใกล้หมด ≤90 วัน</th><th>หมดอายุแล้ว</th><th>ยังไม่มีวันที่</th><th>รอต่อสัญญา</th><th>ขาดรอบ PM</th></tr></thead><tbody>
+      ${H.map(h => `<tr><td class="name"><a href="?p=${h.code.toLowerCase()}">${esc(h.name)}</a></td><td class="n">${h.contracts}</td><td class="n ${h.active?"s-ok":""}">${h.active}</td><td class="n ${h.soon?"s-miss":""}">${h.soon}</td><td class="n ${h.expired?"s-bad":""}">${h.expired}</td><td class="n ${h.noDate?"s-none":""}">${h.noDate}</td><td class="n ${h.renew?"s-part":""}">${h.renew}</td><td class="n ${h.overdue?"s-miss":""}">${h.overdue}</td></tr>`).join("")}
+      </tbody></table></div>
+      <p class="foot">อัปเดต ${esc(d.generated)} · ข้อมูลจากโฟลเดอร์ PM MA Master plan ใน Google Drive</p>
+    </div>`;
+  document.querySelectorAll("[data-v]").forEach(b => b.onclick = () => { view = b.dataset.v; draw(); });
+  draw();
+}
+
+/* ---------- รายโรง ---------- */
+async function hospital(){
+  const name = (HOSP.find(h => h[0] === CODE) || [,""])[1];
+  if (!name) { $("app").innerHTML = `<div class="card">ไม่พบโรงพยาบาลรหัส ${esc(CODE)}</div>`; return; }
+  $("title").textContent = "PM MA " + name;
+  const d = await api({ api: "hospital", p: CODE, t: TOKEN });
+  const C = d.contracts;
+  let tab = "contracts";
+  const tabs = [["contracts","สัญญาและการต่อสัญญา"],["visits","การเข้า PM ของผู้รับเหมา"],["plan","Master plan"]].concat(d.canEdit ? [["record","บันทึกข้อมูล"]] : []);
+  $("app").innerHTML = `
+    <div class="kpis">
+      <div class="kpi"><b>${C.length}</b><span>สัญญา MA</span></div>
+      <div class="kpi warn"><b>${C.filter(c=>c.renew).length}</b><span>รอต่อสัญญา</span></div>
+      <div class="kpi bad"><b>${C.filter(c=>c.status==="หมดอายุแล้ว").length}</b><span>หมดอายุแล้ว</span></div>
+      <div class="kpi warn"><b>${C.filter(c=>c.overdue).length}</b><span>ขาดรอบ PM</span></div>
+      <div class="kpi"><b>${C.filter(c=>c.status==="ยังไม่มีวันที่").length}</b><span>ยังไม่มีวันที่สัญญา</span></div>
+    </div>
+    <div class="tabs" id="tabs">${tabs.map(([k,l]) => `<button data-t="${k}">${l}</button>`).join("")}</div>
+    <div id="pane"></div>`;
+  const show = async k => {
+    tab = k; document.querySelectorAll("[data-t]").forEach(b => b.setAttribute("aria-selected", b.dataset.t === k));
+    if (k === "contracts") $("pane").innerHTML = contractsHtml(C, d.steps);
+    if (k === "visits") $("pane").innerHTML = visitsHtml(C);
+    if (k === "plan") { $("pane").innerHTML = `<div class="card loading">กำลังโหลด Master plan…</div>`; try { planHtml(await api({ api: "plan", p: CODE })); } catch(e){ $("pane").innerHTML = `<div class="card">${esc(e.message)}</div>`; } }
+    if (k === "record") recordHtml(C, d.steps);
+  };
+  document.querySelectorAll("[data-t]").forEach(b => b.onclick = () => show(b.dataset.t));
+  show(C.some(c => c.renew) ? "contracts" : "contracts");
+}
+
+function contractsHtml(C, steps){
+  const rows = C.slice().sort((a,b) => (b.renew - a.renew) || ((a.daysLeft ?? 1e9) - (b.daysLeft ?? 1e9))).map(c => `
+    <tr><td>${esc(c.sys)}<br><b>${esc(c.scope)}</b>${c.n ? `<br><small>${esc(c.n)} เครื่อง</small>` : ""}</td>
+    <td>${esc(c.vendor || "-")}</td><td class="n">${c.freq || "-"}</td>
+    <td class="n">${thd(c.start)}<br>${thd(c.end)}</td>
+    <td class="n"><span class="pill ${statusCls(c.status)}">${esc(c.status)}</span><br><small>${dayTxt(c)}</small></td>
+    <td>${c.renew ? `<b>${esc(c.stage)}</b><div class="steps">${steps.map((s,i) => `<span class="${c.steps[i]?"y":"n"}">${c.steps[i]?"✓":"○"} ${esc(s)}</span>`).join("")}</div>` : (c.poDone ? `<span class="pill s-ok">ออก PO แล้ว</span>` : "-")}</td>
+    <td class="n ${c.overdue ? "s-miss" : ""}">${thd(c.lastVisit)}${c.overdue ? "<br><small>ขาดรอบ</small>" : c.nextDue ? `<br><small>รอบถัดไป ${thd(c.nextDue)}</small>` : ""}</td></tr>`).join("");
+  return `<div class="card"><h2>ทะเบียนสัญญา MA</h2>
+    <div class="legend"><span><i style="--c:var(--ok)"></i>ยังมีผล</span><span><i style="--c:var(--miss)"></i>ใกล้หมด ≤90 วัน</span><span><i style="--c:var(--bad)"></i>หมดอายุแล้ว</span><span><i style="--c:var(--none)"></i>ยังไม่มีวันที่</span></div>
+    <div class="tscroll"><table><thead><tr><th>ระบบ / ขอบเขตสัญญา</th><th>ผู้รับเหมา</th><th>รอบ PM</th><th>เริ่ม / สิ้นสุด</th><th>สถานะ</th><th>ต่อสัญญา (PR → 3 เจ้า → สรุป → PO)</th><th>เข้า PM ล่าสุด</th></tr></thead><tbody>${rows || `<tr><td colspan="7">ยังไม่มีข้อมูลในทะเบียนสัญญา</td></tr>`}</tbody></table></div>
+    <p class="foot">แก้ไขข้อมูลสัญญาได้ที่ไฟล์ทะเบียนสัญญาของโรงในโฟลเดอร์ 02 ทะเบียนสัญญา</p></div>`;
+}
+
+function visitsHtml(C){
+  const all = []; C.forEach(c => c.visits.forEach(v => all.push([v, c])));
+  all.sort((a,b) => a[0].date < b[0].date ? 1 : -1);
+  const od = C.filter(c => c.overdue);
+  return `<div class="card"><h2>ผู้รับเหมาขาดรอบ PM ตามสัญญา (${od.length})</h2>
+    ${od.length ? `<div class="tscroll"><table><thead><tr><th>ผู้รับเหมา</th><th>งาน</th><th>รอบ</th><th>เข้าล่าสุด</th></tr></thead><tbody>${od.map(c => `<tr><td>${esc(c.vendor)}</td><td>${esc(c.scope)}</td><td class="n">${c.freq}</td><td class="n s-miss">${thd(c.lastVisit)}</td></tr>`).join("")}</tbody></table></div>` : `<p class="muted">ไม่มีผู้รับเหมาขาดรอบ</p>`}</div>
+    <div class="card"><h2>บันทึกการเข้า PM ล่าสุด</h2>
+    ${all.length ? `<div class="tscroll"><table><thead><tr><th>วันที่</th><th>ผู้รับเหมา</th><th>งาน</th><th>ผล</th><th>รายงาน</th></tr></thead><tbody>${all.slice(0,100).map(([v,c]) => `<tr><td class="n">${thd(v.date)}</td><td>${esc(c.vendor)}</td><td>${esc(c.scope)}${v.detail?`<br><small>${esc(v.detail)}</small>`:""}</td><td>${esc(v.result||"-")}</td><td>${v.link?`<a href="${esc(v.link)}" target="_blank" rel="noopener">เปิด</a>`:"-"}</td></tr>`).join("")}</tbody></table></div>` : `<p class="muted">ยังไม่มีบันทึก</p>`}</div>`;
+}
+
+function planHtml(P){
+  if (!P.rows.length) { $("pane").innerHTML = `<div class="card">${esc(P.note || "ยังไม่มีข้อมูล Master plan")}</div>`; return; }
+  $("pane").innerHTML = `<div class="card"><h2>Master plan PM MA ปี ${P.year}</h2>
+    <p class="foot">ไฟล์: ${esc(P.file)} · ${P.rows.length.toLocaleString()} เครื่อง · งานรวมทั้งปี ${P.perMonth.reduce((a,b)=>a+b,0).toLocaleString()} ครั้ง</p>
+    <div class="ctrl" style="margin:8px 0"><input id="q" placeholder="ค้นหาชื่อเครื่อง รหัส ระบบ ผู้รับเหมา" style="min-width:260px"><select id="mf"><option value="">ทุกเดือน</option>${MONTHS.map((m,i)=>`<option value="${i}">${m}</option>`).join("")}</select><span class="muted" id="cnt"></span></div>
+    <div class="tscroll" id="pt"></div></div>`;
+  const draw = () => {
+    const q = $("q").value.trim().toLowerCase(), mf = $("mf").value;
+    const rows = P.rows.filter(r => (!q || (r[0]+" "+r[1]+" "+r[6]+" "+r[7]+" "+r[2]).toLowerCase().includes(q)) && (mf === "" || r[5][+mf]));
+    $("cnt").textContent = rows.length.toLocaleString() + " รายการ";
+    $("pt").innerHTML = `<table class="plan"><thead><tr><th>เครื่อง</th><th>รหัส</th><th>ที่ตั้ง</th><th>ความถี่</th>${MONTHS.map(m=>`<th>${m}</th>`).join("")}<th>ระบบ</th><th>ผู้รับเหมา</th></tr></thead><tbody>${
+      rows.slice(0,800).map(r => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${esc([r[2],r[3]].filter(Boolean).join(" · "))}</td><td class="m">${esc(r[4])}</td>${r[5].map((v,i)=>`<td class="m ${v?"on":""} ${i===nowM?"now":""}">${esc(v)}</td>`).join("")}<td>${esc(r[6])}</td><td>${esc(r[7])}</td></tr>`).join("")
+    }</tbody></table>${rows.length > 800 ? `<p class="foot">แสดง 800 รายการแรก ใช้ช่องค้นหาเพื่อกรอง</p>` : ""}`;
+  };
+  $("q").oninput = draw; $("mf").onchange = draw; draw();
+}
+
+function recordHtml(C, steps){
+  const opts = C.filter(c => c.status !== "ยกเลิก").map((c,i) => `<option value="${i}">${esc((c.vendor||"(ไม่ระบุผู้รับเหมา)") + " — " + c.scope)}</option>`).join("");
+  const today = new Date(Date.now() - new Date().getTimezoneOffset()*60000).toISOString().slice(0,10);
+  $("pane").innerHTML = `<div class="forms">
+    <div class="card"><h2>บันทึกผู้รับเหมาเข้า PM</h2>
+      <label>สัญญา / ผู้รับเหมา</label><select id="vK">${opts}</select>
+      <label>วันที่เข้า PM</label><input id="vD" type="date" value="${today}">
+      <label>รายละเอียดงาน</label><input id="vT" placeholder="เช่น PM ประจำเดือน ลิฟท์ 3 ตัว">
+      <label>ผลการตรวจ</label><select id="vR"><option>ปกติ</option><option>พบปัญหา แก้ไขแล้ว</option><option>พบปัญหา รอแก้ไข</option></select>
+      <label>ลิงก์รายงาน / รูป (ถ้ามี)</label><input id="vL" type="url" placeholder="https://">
+      <label>ผู้บันทึก</label><input id="vB">
+      <button class="btn" id="vS">บันทึก</button><div class="msg" id="vM"></div></div>
+    <div class="card"><h2>บันทึกขั้นตอนต่อสัญญา</h2>
+      <label>สัญญา / ผู้รับเหมาเดิม</label><select id="pK">${opts}</select>
+      <label>ขั้นตอน</label><select id="pS">${steps.map(s=>`<option>${s}</option>`).join("")}</select>
+      <label>วันที่</label><input id="pD" type="date" value="${today}">
+      <label>เลขที่เอกสาร (PR / PO / ใบเสนอราคา)</label><input id="pN">
+      <label>ผู้ขาย / ผู้เสนอราคา</label><input id="pV" placeholder="ใบเสนอราคา 3 เจ้า: บันทึกทีละเจ้า">
+      <label>ราคา (บาท)</label><input id="pP" inputmode="decimal">
+      <label>หมายเหตุ</label><input id="pR">
+      <label>ผู้บันทึก</label><input id="pB">
+      <button class="btn" id="pSave">บันทึก</button><div class="msg" id="pM"></div></div></div>`;
+  const live = C.filter(c => c.status !== "ยกเลิก");
+  const go = async (btn, msg, fn, data) => {
+    btn.disabled = true; $(msg).className = "msg"; $(msg).textContent = "กำลังบันทึก…";
+    try { await post(fn, data); $(msg).className = "msg ok"; $(msg).textContent = "บันทึกแล้ว"; }
+    catch(e){ $(msg).className = "msg err"; $(msg).textContent = e.message; }
+    btn.disabled = false;
+  };
+  $("vS").onclick = () => { const c = live[$("vK").value]; go($("vS"), "vM", "visitAdd", { key:c.key, vendor:c.vendor, date:$("vD").value, detail:$("vT").value, result:$("vR").value, link:$("vL").value, by:$("vB").value }); };
+  $("pSave").onclick = () => { const c = live[$("pK").value]; go($("pSave"), "pM", "procAdd", { key:c.key, vendor:c.vendor, step:$("pS").value, date:$("pD").value, doc:$("pN").value, seller:$("pV").value, price:$("pP").value, note:$("pR").value, by:$("pB").value }); };
+}
+
+(CODE ? hospital() : overview()).catch(e => { $("app").innerHTML = `<div class="card">โหลดข้อมูลไม่สำเร็จ: ${esc(e.message)}</div>`; });
+</script>
+</body>
+</html>
