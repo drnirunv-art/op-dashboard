@@ -140,13 +140,6 @@ async function overview(){
       <div class="kpi"><b>${visitM} / ${plannedM.toLocaleString()}</b><span>เครื่องที่ทำ PM เดือนนี้ / แผนตาม Master plan</span></div>
     </div>
     <div class="card">
-      <h2>สถานะสัญญา MA รายโรง</h2>
-      <div class="tscroll"><table><thead><tr><th>โรงพยาบาล</th><th>สัญญาทั้งหมด</th><th>ยังมีผล</th><th>ใกล้หมด ≤90 วัน</th><th>หมดอายุแล้ว</th><th>ยังไม่มีวันที่</th><th>รอต่อสัญญา</th><th>ขาดรอบ PM</th></tr></thead><tbody>
-      ${H.map(h => `<tr><td class="name"><a href="?p=${h.code.toLowerCase()}">${esc(h.name)}</a></td><td class="n">${h.contracts}</td><td class="n ${h.active?"s-ok":""}">${h.active}</td><td class="n ${h.soon?"s-miss":""}">${h.soon}</td><td class="n ${h.expired?"s-bad":""}">${h.expired}</td><td class="n ${h.noDate?"s-none":""}">${h.noDate}</td><td class="n ${h.renew?"s-part":""}">${h.renew}</td><td class="n ${h.overdue?"s-miss":""}">${h.overdue}</td></tr>`).join("")}
-      </tbody></table></div>
-      <p class="foot">อัปเดต ${esc(d.generated)} · ข้อมูลจากโฟลเดอร์ PM MA Master plan ใน Google Drive</p>
-    </div>
-    <div class="card">
       <h2>แดชบอร์ดแยกกลุ่มงาน MA ปี ${d.year}</h2>
       <div class="tabs" id="gtabs"></div>
       <div id="gdesc" class="muted" style="margin:-6px 0 10px"></div>
@@ -155,6 +148,13 @@ async function overview(){
       <div class="legend"><span><i style="--c:var(--plan)"></i>แผน: สัญญาที่ต้องเข้า PM ในเดือนนั้น</span><span><i style="--c:var(--ok)"></i>เข้าครบตามแผน</span><span><i style="--c:#FFD600"></i>เฝ้าระวัง: มี PO และเข้าจริง แต่ไม่ตรงเดือน</span><span><i style="--c:var(--bad)"></i>ไม่ได้เข้าตามแผน</span><span><i style="--c:var(--none)"></i>ยังไม่ถึง / ไม่มีแผน</span><span>✓ ผู้รับเหมายืนยันนัดแล้ว · ⏳ รอตอบ · ⚠ ขอเลื่อน/ไม่เข้า</span></div>
       <div class="tscroll" id="pva"><div class="loading">กำลังโหลดข้อมูลสัญญา 12 โรง…</div></div>
       <p class="foot">ชี้ที่ช่องเพื่อดูรายชื่อสัญญา · แผนคำนวณจากวันเริ่มสัญญาและรอบเข้า PM ในทะเบียนสัญญา · ผลจริงจากการบันทึกการเข้า PM</p>
+    </div>
+    <div class="card">
+      <h2>สถานะสัญญา MA รายโรง</h2>
+      <div class="tscroll"><table><thead><tr><th>โรงพยาบาล</th><th>สัญญาทั้งหมด</th><th>ยังมีผล</th><th>ใกล้หมด ≤90 วัน</th><th>หมดอายุแล้ว</th><th>ยังไม่มีวันที่</th><th>รอต่อสัญญา</th><th>ขาดรอบ PM</th></tr></thead><tbody>
+      ${H.map(h => `<tr><td class="name"><a href="?p=${h.code.toLowerCase()}">${esc(h.name)}</a></td><td class="n">${h.contracts}</td><td class="n ${h.active?"s-ok":""}">${h.active}</td><td class="n ${h.soon?"s-miss":""}">${h.soon}</td><td class="n ${h.expired?"s-bad":""}">${h.expired}</td><td class="n ${h.noDate?"s-none":""}">${h.noDate}</td><td class="n ${h.renew?"s-part":""}">${h.renew}</td><td class="n ${h.overdue?"s-miss":""}">${h.overdue}</td></tr>`).join("")}
+      </tbody></table></div>
+      <p class="foot">อัปเดต ${esc(d.generated)} · ข้อมูลจากโฟลเดอร์ PM MA Master plan ใน Google Drive</p>
     </div>
     <div class="card">
       <h2>แผนงาน PM รายเดือนทั้งปี ${d.year} — 12 โรง (สัญญา / เครื่อง)</h2>
