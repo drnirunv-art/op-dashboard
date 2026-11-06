@@ -343,8 +343,7 @@ async function groupDash(SUM){
     document.querySelectorAll("[data-g]").forEach(b => { b.setAttribute("aria-selected", b.dataset.g === gid); b.onclick = () => { gid = b.dataset.g; try { localStorage.setItem("pmma-group", gid); } catch (e) {} draw(); }; });
     const g = GROUPS.find(x => x.id === gid);
     $("gdesc").textContent = g ? g.desc : "ภาพรวมทุกกลุ่ม: ตัวเลข = จำนวนสัญญาในกลุ่ม สีช่อง = สถานะที่แย่ที่สุดในกลุ่ม · กดแท็บกลุ่มเพื่อดูแยกรายการ · กลุ่มอ่านจากคอลัมน์ \"กลุ่มงาน\" ในทะเบียนสัญญาของแต่ละโรง (แก้ในไฟล์ได้)";
-    $("gmatrix").innerHTML = g ? matrixHtml(g, all) : `<h3 class="sub">สรุปรวม 5 กลุ่ม</h3>` + matrixHtml(ALLG, all) +
-      GROUPS.map(x => `<h3 class="sub">${esc(x.name)} <small class="muted">(${cnt(x.id)} สัญญา)</small></h3><p class="muted" style="margin:-4px 0 6px">${esc(x.desc)}</p>` + matrixHtml(x, all)).join("");
+    $("gmatrix").innerHTML = g ? matrixHtml(g, all) : matrixHtml(ALLG, all);
     $("pva").innerHTML = pvaHtml(all, Y, gid);
     $("pvaG").textContent = g ? "— " + g.name : "— ทุกกลุ่ม";
   };
