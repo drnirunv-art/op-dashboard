@@ -130,24 +130,25 @@ async function overview(){
   const d = await api({ api: "summary" });
   const H = d.hospitals, sum = k => H.reduce((a,h) => a + (h[k]||0), 0);
   const plannedM = H.reduce((a,h) => a + (h.planned ? h.planned[nowM] : 0), 0);
-  const visitM = H.reduce((a,h) => a + h.visits[nowM], 0);
-  let view = "plan";
+  const visitM = H.reduce((a,h) => a + ((h.done || [])[nowM] || 0), 0);
   const draw = () => {
     const grid = H.map(h => {
-      const cells = MONTHS.map((_,m) => {
-        const p = h.planned ? h.planned[m] : null, v = h.visits[m];
-        if (view === "plan") return `<td class="n ${p ? "s-part" : "s-none"}">${p == null ? "-" : p}</td>`;
-        const cls = m > nowM ? "s-none" : v > 0 ? "s-ok" : (p ? "s-miss" : "s-none");
-        return `<td class="n ${cls}">${v}</td>`;
+      const P = h.planned, D = h.done || Array(12).fill(0);
+      const pc = MONTHS.map((_,m) => `<td class="n ${P && P[m] ? "s-plan" : "s-none"}">${P == null ? "-" : P[m]}</td>`).join("");
+      const ac = MONTHS.map((_,m) => {
+        const p = P ? P[m] : 0, v = D[m] || 0;
+        let cls = "s-none";
+        if (p && v >= p) cls = "s-ok";
+        else if (m < nowM && p) cls = v > 0 ? "s-watch" : "s-bad";
+        else if (m === nowM && v > 0) cls = "s-watch";
+        const pct = p ? Math.round(v / p * 100) + "%" : "";
+        return `<td class="n ${cls}" title="${esc(MONTHS[m] + ": ทำแล้ว " + v + " / แผน " + p + " เครื่อง")}">${m > nowM ? "" : v}${m <= nowM && p ? `<br><small>${pct}</small>` : ""}</td>`;
       }).join("");
-      const tot = view === "plan" ? (h.planned ? h.planned.reduce((a,b)=>a+b,0) : "-") : h.visits.reduce((a,b)=>a+b,0);
-      return `<tr><td class="name"><a href="?p=${h.code.toLowerCase()}">${esc(h.name)}</a><small>${h.machines == null ? "ยังไม่มี Master plan" : h.machines.toLocaleString() + " เครื่อง"}</small></td>${cells}<td class="n"><b>${tot}</b></td></tr>`;
+      const tp = P ? P.reduce((a,b)=>a+b,0) : 0, td = D.reduce((a,b)=>a+b,0);
+      return `<tr class="pv-top"><td class="name" rowspan="2"><a href="?p=${h.code.toLowerCase()}">${esc(h.name)}</a><small>${h.machines == null ? "ยังไม่มี Master plan" : h.machines.toLocaleString() + " เครื่อง"}</small></td><td class="lbl">แผน</td>${pc}<td class="n"><b>${P ? tp.toLocaleString() : "-"}</b></td></tr><tr class="pv-bot"><td class="lbl">จริง</td>${ac}<td class="n"><b>${td.toLocaleString()}</b></td></tr>`;
     }).join("");
-    $("grid").innerHTML = `<table class="month"><thead><tr><th>โรงพยาบาล</th>${MONTHS.map(m=>`<th>${m}</th>`).join("")}<th>รวม</th></tr></thead><tbody>${grid}</tbody></table>`;
-    $("gridLegend").innerHTML = view === "plan"
-      ? `<span><i style="--c:var(--part)"></i>จำนวนงาน PM ตามตาราง MA (ครั้ง/เดือน)</span>`
-      : `<span><i style="--c:var(--ok)"></i>มีผู้รับเหมาเข้า PM</span><span><i style="--c:var(--miss)"></i>มีงานตามแผนแต่ยังไม่มีบันทึก</span><span><i style="--c:var(--none)"></i>ไม่มีงาน / ยังไม่ถึง</span>`;
-    document.querySelectorAll("[data-v]").forEach(b => b.setAttribute("aria-selected", b.dataset.v === view));
+    $("grid").innerHTML = `<table class="month pva"><thead><tr><th>โรงพยาบาล</th><th></th>${MONTHS.map(m=>`<th>${m}</th>`).join("")}<th>รวม</th></tr></thead><tbody>${grid}</tbody></table>`;
+    $("gridLegend").innerHTML = `<span><i style="--c:var(--plan)"></i>แผน: จำนวนเครื่องที่ต้อง PM ตาม Master plan</span><span><i style="--c:var(--ok)"></i>ทำครบตามแผน</span><span><i style="--c:#FFD600"></i>ทำได้บางส่วน</span><span><i style="--c:var(--bad)"></i>ยังไม่มีบันทึก</span><span>จริง = จำนวนเครื่องที่วิศวกรบันทึกในฟอร์ม ข</span>`;
   };
   $("app").innerHTML = `
     <div class="kpis">
@@ -155,7 +156,7 @@ async function overview(){
       <div class="kpi warn"><b>${sum("renew")}</b><span>รอต่อสัญญา (≤90 วัน / หมดแล้วยังไม่ PO)</span></div>
       <div class="kpi bad"><b>${sum("expired")}</b><span>สัญญาหมดอายุแล้ว</span></div>
       <div class="kpi warn"><b>${sum("overdue")}</b><span>ผู้รับเหมาขาดรอบ PM</span></div>
-      <div class="kpi"><b>${visitM} / ${plannedM.toLocaleString()}</b><span>เข้า PM เดือนนี้ / งานตามตาราง MA</span></div>
+      <div class="kpi"><b>${visitM} / ${plannedM.toLocaleString()}</b><span>เครื่องที่ทำ PM เดือนนี้ / แผนตาม Master plan</span></div>
     </div>
     <div class="card">
       <h2>สถานะสัญญา MA รายโรง</h2>
@@ -175,13 +176,11 @@ async function overview(){
       <p class="foot">ชี้ที่ช่องเพื่อดูรายชื่อสัญญา · แผนคำนวณจากวันเริ่มสัญญาและรอบเข้า PM ในทะเบียนสัญญา · ผลจริงจากการบันทึกการเข้า PM</p>
     </div>
     <div class="card">
-      <h2>รายงานรายเดือนทั้งปี ${d.year} — 12 โรง</h2>
-      <div class="tabs"><button data-v="plan">งานตามตาราง MA</button><button data-v="visit">ผู้รับเหมาเข้า PM จริง</button></div>
+      <h2>แผนงาน PM รายเดือนทั้งปี ${d.year} — 12 โรง (จำนวนเครื่องตาม Master plan เทียบที่ทำจริง)</h2>
       <div class="legend" id="gridLegend"></div>
       <div class="tscroll" id="grid"></div>
     </div>
 `;
-  document.querySelectorAll("[data-v]").forEach(b => b.onclick = () => { view = b.dataset.v; draw(); });
   draw();
   groupDash().catch(e => { $("pva").innerHTML = `<div class="msg err">โหลดไม่สำเร็จ: ${esc(e.message)}</div>`; });
 }
@@ -425,6 +424,7 @@ function recordHtml(C, steps, confirm){
       <label>เข้าตรงตามนัดหรือไม่</label><select id="vO"><option>ตรงตามนัด</option><option>ไม่ตรงตามนัด</option><option>ไม่ได้นัดล่วงหน้า</option></select>
       <label>ช่างผู้รับเหมา (ชื่อหัวหน้าทีม)</label><input id="vTe">
       <label>จำนวนช่าง (คน)</label><input id="vN" inputmode="numeric">
+      <label>จำนวนเครื่องที่ทำ PM ครั้งนี้</label><input id="vMa" inputmode="numeric" placeholder="ใช้เทียบกับแผนตาม Master plan">
       <label>รายการ / เครื่องที่ตรวจ</label><input id="vT" placeholder="เช่น PM ประจำเดือน ลิฟต์ No.1-3">
       <label>ผลการตรวจ</label><select id="vR"><option>ปกติ</option><option>พบปัญหา แก้ไขแล้ว</option><option>พบปัญหา รอแก้ไข</option></select>
       <label>ปัญหาที่พบ (ถ้ามี)</label><input id="vP">
@@ -457,7 +457,7 @@ function recordHtml(C, steps, confirm){
   $("vK").onchange = () => { $("vV").value = live[$("vK").value].vendor || ""; };
   $("aK").onchange(); $("vK").onchange();
   $("aSave").onclick = () => { const c = live[$("aK").value]; go($("aSave"), "aMsg", "apptAdd", { key:c.key, vendor:$("aV").value || c.vendor, month:$("aM").value, date:$("aD").value, status:$("aS").value, newDate:$("aN").value, ref:$("aR").value, note:$("aT").value, by:$("aB").value }); };
-  $("vS").onclick = () => { const c = live[$("vK").value]; go($("vS"), "vM", "visitAdd", { key:c.key, vendor:$("vV").value || c.vendor, date:$("vD").value, detail:$("vT").value, result:$("vR").value, link:$("vL").value, by:$("vB").value, onTime:$("vO").value, tech:$("vTe").value, techN:$("vN").value, problem:$("vP").value, quote:$("vQ").value, sup:$("vSu").value }); };
+  $("vS").onclick = () => { const c = live[$("vK").value]; go($("vS"), "vM", "visitAdd", { key:c.key, vendor:$("vV").value || c.vendor, date:$("vD").value, detail:$("vT").value, result:$("vR").value, link:$("vL").value, by:$("vB").value, onTime:$("vO").value, tech:$("vTe").value, techN:$("vN").value, problem:$("vP").value, quote:$("vQ").value, sup:$("vSu").value, machines:$("vMa").value }); };
   $("pSave").onclick = () => { const c = live[$("pK").value]; go($("pSave"), "pM", "procAdd", { key:c.key, vendor:c.vendor, step:$("pS").value, date:$("pD").value, doc:$("pN").value, seller:$("pV").value, price:$("pP").value, note:$("pR").value, by:$("pB").value }); };
 }
 
