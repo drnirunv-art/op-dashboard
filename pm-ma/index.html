@@ -158,6 +158,13 @@ async function overview(){
       <div class="kpi"><b>${visitM} / ${plannedM.toLocaleString()}</b><span>เข้า PM เดือนนี้ / งานตามตาราง MA</span></div>
     </div>
     <div class="card">
+      <h2>สถานะสัญญา MA รายโรง</h2>
+      <div class="tscroll"><table><thead><tr><th>โรงพยาบาล</th><th>สัญญาทั้งหมด</th><th>ยังมีผล</th><th>ใกล้หมด ≤90 วัน</th><th>หมดอายุแล้ว</th><th>ยังไม่มีวันที่</th><th>รอต่อสัญญา</th><th>ขาดรอบ PM</th></tr></thead><tbody>
+      ${H.map(h => `<tr><td class="name"><a href="?p=${h.code.toLowerCase()}">${esc(h.name)}</a></td><td class="n">${h.contracts}</td><td class="n ${h.active?"s-ok":""}">${h.active}</td><td class="n ${h.soon?"s-miss":""}">${h.soon}</td><td class="n ${h.expired?"s-bad":""}">${h.expired}</td><td class="n ${h.noDate?"s-none":""}">${h.noDate}</td><td class="n ${h.renew?"s-part":""}">${h.renew}</td><td class="n ${h.overdue?"s-miss":""}">${h.overdue}</td></tr>`).join("")}
+      </tbody></table></div>
+      <p class="foot">อัปเดต ${esc(d.generated)} · ข้อมูลจากโฟลเดอร์ PM MA Master plan ใน Google Drive</p>
+    </div>
+    <div class="card">
       <h2>แดชบอร์ดแยกกลุ่มงาน MA ปี ${d.year}</h2>
       <div class="tabs" id="gtabs"></div>
       <div id="gdesc" class="muted" style="margin:-6px 0 10px"></div>
@@ -173,13 +180,7 @@ async function overview(){
       <div class="legend" id="gridLegend"></div>
       <div class="tscroll" id="grid"></div>
     </div>
-    <div class="card">
-      <h2>สถานะสัญญา MA รายโรง</h2>
-      <div class="tscroll"><table><thead><tr><th>โรงพยาบาล</th><th>สัญญาทั้งหมด</th><th>ยังมีผล</th><th>ใกล้หมด ≤90 วัน</th><th>หมดอายุแล้ว</th><th>ยังไม่มีวันที่</th><th>รอต่อสัญญา</th><th>ขาดรอบ PM</th></tr></thead><tbody>
-      ${H.map(h => `<tr><td class="name"><a href="?p=${h.code.toLowerCase()}">${esc(h.name)}</a></td><td class="n">${h.contracts}</td><td class="n ${h.active?"s-ok":""}">${h.active}</td><td class="n ${h.soon?"s-miss":""}">${h.soon}</td><td class="n ${h.expired?"s-bad":""}">${h.expired}</td><td class="n ${h.noDate?"s-none":""}">${h.noDate}</td><td class="n ${h.renew?"s-part":""}">${h.renew}</td><td class="n ${h.overdue?"s-miss":""}">${h.overdue}</td></tr>`).join("")}
-      </tbody></table></div>
-      <p class="foot">อัปเดต ${esc(d.generated)} · ข้อมูลจากโฟลเดอร์ PM MA Master plan ใน Google Drive</p>
-    </div>`;
+`;
   document.querySelectorAll("[data-v]").forEach(b => b.onclick = () => { view = b.dataset.v; draw(); });
   draw();
   groupDash().catch(e => { $("pva").innerHTML = `<div class="msg err">โหลดไม่สำเร็จ: ${esc(e.message)}</div>`; });
