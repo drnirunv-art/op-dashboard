@@ -214,45 +214,63 @@ const GROUPS = [
     ["ตรวจสมรรถนะ Generator", new RegExp(`((${INSP}).*(gen|เครื่องกำเนิด))|((gen|เครื่องกำเนิด).*(${INSP}))`, "i")],
     ["ตรวจสมรรถนะ Fire pump", new RegExp(`((${INSP}).*(fire ?pump|สูบน้ำดับเพลิง))|((fire ?pump|สูบน้ำดับเพลิง).*(${INSP}))`, "i")],
     ["ล้างถังเก็บน้ำ ใต้ดิน / บนหลังคา", /ล้าง.*ถัง|ถังเก็บน้ำ|tank ?clean|roof ?tank|under ?ground/i],
-    ["MA บ่อบำบัดน้ำเสีย (WWTP)", /บำบัด|wwtp|น้ำเสีย/i],
+    ["MA บ่อบำบัดน้ำเสีย (WWTP)", /บ่อบำบัด|บำบัดน้ำเสีย|wwtp|น้ำเสีย/i],
     ["ตรวจสอบลิฟต์", new RegExp(`(${INSP}).*(ลิฟ|lift|elevator)`, "i")],
-    ["ตรวจระบบก๊าซประจำปี (เสนอเพิ่ม)", /ก๊าซ|แก๊ส|lpg|\bgas\b/i],
-    ["ตรวจหม้อไอน้ำ Boiler (เสนอเพิ่ม)", /boiler|หม้อไอน้ำ/i]]},
+    ["ตรวจระบบก๊าซประจำปี (เสนอเพิ่ม)", /(?<!ดับเพลิง\S*)(ก๊าซ|แก๊ส)(?!.*(fm ?200|ดับเพลิง))|lpg|\bgas\b/i],
+    ["ตรวจหม้อไอน้ำ Boiler (เสนอเพิ่ม)", /boiler|หม้อไอน้ำ/i],
+    ["อื่นๆ ในกลุ่มนี้", /(?!)/, true]]},
   { id:"avail", name:"2. ความพร้อมใช้เครื่องจักร (มาตรฐาน)", desc:"ไม่ได้ระบุในกฎหมาย แต่มาตรฐานกำหนดให้ทำทุกปี: ล้างแอร์ ล้าง Tube Chiller และ PM รายปีของเครื่องจักรทุกเครื่อง รวม UPS", items:[
     ["Chiller (MA / ล้าง Tube)", /chiller|ชิลเลอร์|ล้าง ?tube/i],
     ["Cooling Tower", /cooling|คูลลิ่ง/i],
     ["ระบบปรับอากาศ / ล้างแอร์ / AHU", /hvac|ปรับอากาศ|แอร์|ahu|fcu|split|vrf|ท่อลมเย็น/i],
     ["Fire Pump (MA)", /fire ?pump|สูบน้ำดับเพลิง/i],
     ["Generator (MA)", /\bgen|generator|เครื่องกำเนิด/i],
-    ["FM200 / Clean Agent", /fm ?200|novec|clean ?agent|สารสะอาด|ดับเพลิงอัตโนมัติ/i],
+    ["FM200 / Clean Agent / ดับเพลิงครัว", /fm ?200|novec|clean ?agent|สารสะอาด|ดับเพลิงอัตโนมัติ|ดับเพลิงครัว/i],
     ["UPS", /\bups\b/i],
-    ["Fire Alarm", /fire ?alarm|ไฟอลาม|แจ้งเหตุเพลิง/i],
-    ["Heat pump / น้ำร้อน", /heat ?pump|น้ำร้อน/i],
-    ["ระบบน้ำ / ปั๊มน้ำ / RO", /ปั๊มน้ำ|ระบบน้ำ|ประปา|\bro\b|water ?pump|softener/i]]},
+    ["Fire Alarm / Detector / Sprinkler", /fire ?alarm|ไฟอลาม|แจ้งเหตุ|smoke|heat ?detector|sprinkler|ประตูหนีไฟ/i],
+    ["Heat pump / น้ำร้อน", /heat\s*pump|น้ำร้อน/i],
+    ["ระบบน้ำ / ปั๊มน้ำ / RO / น้ำดื่ม", /ปั๊มน้ำ|ระบบน้ำ|ประปา|\bro\b|water ?pump|softener|น้ำดื่ม|กรองน้ำ|น้ำบริสุทธิ์|สุขภัณฑ์|ห้องน้ำ/i],
+    ["ระบบไฟฟ้า (TR / MDB / ATS / HV / DB)", /หม้อแปลง|\btr\b|mdb|acb|\bats\b|rmu|ring main|capacitor|switchgear|แรงสูง|busway|\bdb\b|sdb|load center|mccb|กราวด์|ล่อฟ้า|solar|lighting|ไฟฟ้า/i],
+    ["ห้องปลอดเชื้อ / Clean room / HEPA", /clean ?room|ปลอดเชื้อ|hepa/i],
+    ["อื่นๆ ในกลุ่มนี้", /(?!)/, true]]},
   { id:"lift", name:"3. ลิฟต์และระบบขนส่ง", desc:"MA ลิฟต์รายเดือน บันไดเลื่อน ท่อลม รถจ่ายยา", items:[
     ["ลิฟต์ / บันไดเลื่อน (MA)", /ลิฟ|lift|elevator|escalator|บันไดเลื่อน|dumbwaiter/i],
     ["ท่อลมรับส่งเอกสาร", /ท่อลม|pneumatic/i],
-    ["รถขนส่ง / รถจ่ายยา", /รถจ่ายยา|agv|รถขนส่ง/i]]},
+    ["รถขนส่ง / รถจ่ายยา", /รถจ่ายยา|agv|รถขนส่ง/i],
+    ["ประตูอัตโนมัติ", /ประตูอัตโนมัติ|auto ?door/i],
+    ["อื่นๆ ในกลุ่มนี้", /(?!)/, true]]},
   { id:"comm", name:"4. สื่อสารและควบคุม", desc:"โทรศัพท์ เครื่องเสียง ทีวี ระบบเฝ้าระวัง", items:[
-    ["โทรศัพท์", /โทรศัพท์|pabx|telephone/i],
+    ["โทรศัพท์", /โทรศัพ|pabx|telephone/i],
     ["เครื่องเสียง / ประกาศ / ทีวี", /เครื่องเสียง|ประกาศ|ทีวี|\btv\b|เคเบิล/i],
-    ["BMS / Power meter / เฝ้าระวัง", /bms|power ?meter|เฝ้าระวัง|monitor|cctv|nurse ?call|access/i]]},
+    ["BMS / Power meter / เฝ้าระวัง", /bms|power ?meter|เฝ้าระวัง|monitor|cctv|nurse ?call|access/i],
+    ["อื่นๆ ในกลุ่มนี้", /(?!)/, true]]},
   { id:"other", name:"5. อื่นๆ ยังไม่จัดกลุ่ม", desc:"สัญญาที่ระบบจัดกลุ่มอัตโนมัติไม่ได้ ตรวจแล้วแจ้งเพิ่มคำค้นได้", items:[["อื่นๆ", /.*/]]}
 ];
+/* กลุ่มงานอ่านจากคอลัมน์ "กลุ่มงาน" ในทะเบียนสัญญาของแต่ละโรงก่อน (ขึ้นต้นด้วยเลข 1–5) ถ้าว่างจึงจัดกลุ่มอัตโนมัติจากคำค้น */
 function classify(c){
   const t = [c.sys, c.scope, c.n].filter(Boolean).join(" ");
+  const m = /^\s*([1-5])/.exec(c.group || "");
+  if (m) {
+    const g = GROUPS[+m[1] - 1];
+    let k = g.items.findIndex(x => x[1].test(t));
+    if (k < 0) k = g.items.length - 1;
+    return [g.id, k];
+  }
   for (const g of GROUPS) for (let k = 0; k < g.items.length; k++) if (g.id !== "other" && g.items[k][1].test(t)) return [g.id, k];
   return ["other", 0];
 }
 const RANK = { "หมดอายุแล้ว":4, "ใกล้หมด":3, "ยังไม่มีวันที่":2, "ยังมีผล":1 };
 function matrixHtml(g, all){
-  const cols = g.items.map(x => `<th>${esc(x[0])}</th>`).join("");
+  const used = k => all.some(h => (h.contracts || []).some(c => c._g === g.id && c._k === k));
+  const vis = g.items.map((x, k) => k).filter(k => !g.items[k][2] || used(k));
+  const cols = vis.map(k => `<th>${esc(g.items[k][0])}</th>`).join("");
   const rows = all.map((h, i) => {
     const cs = h.contracts || [];
-    const cells = g.items.map((x, k) => {
+    const cells = vis.map(k => {
       const m = cs.filter(c => c._g === g.id && c._k === k && c.status !== "ยกเลิก");
       if (!h.contracts) return `<td class="n s-none">?</td>`;
-      if (!m.length) return `<td class="n ${g.must ? "s-missing" : "s-none"}" title="ยังไม่พบสัญญาในทะเบียน">${g.must ? "ไม่มี" : "-"}</td>`;
+      const must = g.must && !g.items[k][2];
+      if (!m.length) return `<td class="n ${must ? "s-missing" : "s-none"}" title="ยังไม่พบสัญญาในทะเบียน">${must ? "ไม่มี" : "-"}</td>`;
       const w = m.reduce((a, c) => (RANK[c.status]||0) > (RANK[a]||0) ? c.status : a, "ยังมีผล");
       const ren = m.filter(c => c.renew).length;
       const t = m.map(c => `${c.scope || c.sys} — ${c.vendor || "-"} — ${c.status}${c.end ? " (สิ้นสุด " + thd(c.end) + ")" : ""}`).join("\n");
@@ -320,7 +338,7 @@ async function groupDash(SUM){
     $("gtabs").innerHTML = `<button data-g="">ทุกกลุ่ม</button>` + GROUPS.map(g => `<button data-g="${g.id}">${esc(g.name)} <small>(${cnt(g.id)})</small></button>`).join("");
     document.querySelectorAll("[data-g]").forEach(b => { b.setAttribute("aria-selected", b.dataset.g === gid); b.onclick = () => { gid = b.dataset.g; try { localStorage.setItem("pmma-group", gid); } catch (e) {} draw(); }; });
     const g = GROUPS.find(x => x.id === gid);
-    $("gdesc").textContent = g ? g.desc : "รวมทุกสัญญา เลือกกลุ่มด้านบนเพื่อดูสถานะสัญญาแยกตามรายการของแต่ละโรง";
+    $("gdesc").textContent = g ? g.desc : "รวมทุกสัญญา เลือกกลุ่มด้านบนเพื่อดูสถานะสัญญาแยกตามรายการของแต่ละโรง · กลุ่มอ่านจากคอลัมน์ \"กลุ่มงาน\" ในทะเบียนสัญญาของแต่ละโรง (แก้ในไฟล์ได้)";
     $("gmatrix").innerHTML = g ? matrixHtml(g, all) : "";
     $("pva").innerHTML = pvaHtml(all, Y, gid);
   };
