@@ -58,7 +58,7 @@ td.name small{display:block;font-weight:400}
 .s-miss{background:var(--miss);color:var(--miss-ink)} .s-part{background:var(--part);color:var(--part-ink)}
 .s-none{background:var(--none);color:var(--none-ink)}
 .s-watch{background:#FFD600;color:#3d3300} .s-missing{background:var(--panel);color:var(--bad);box-shadow:inset 0 0 0 2px var(--bad);font-weight:600}
-h3.sub{font-size:15px;margin:18px 0 8px} table.gm th{min-width:92px;font-size:12px} .s-plan{background:var(--plan);color:var(--plan-ink)}
+h3.sub{font-size:15px;margin:18px 0 8px} table.combo td.n{font-size:12.5px;line-height:1.35;min-width:74px} table.combo td.n small{font-size:10.5px;color:inherit;opacity:.85} table.gm th{min-width:92px;font-size:12px} .s-plan{background:var(--plan);color:var(--plan-ink)}
 td.lbl{font-size:12px;color:var(--muted);text-align:center;white-space:nowrap;background:transparent}
 table.pva tr.pv-bot td{padding-bottom:7px} table.pva tr.pv-top td.n{border-bottom:2px solid var(--panel)}
 table.pva tbody tr.pv-top td{border-top:6px solid transparent}
@@ -131,25 +131,6 @@ async function overview(){
   const H = d.hospitals, sum = k => H.reduce((a,h) => a + (h[k]||0), 0);
   const plannedM = H.reduce((a,h) => a + (h.planned ? h.planned[nowM] : 0), 0);
   const visitM = H.reduce((a,h) => a + ((h.done || [])[nowM] || 0), 0);
-  const draw = () => {
-    const grid = H.map(h => {
-      const P = h.planned, D = h.done || Array(12).fill(0);
-      const pc = MONTHS.map((_,m) => `<td class="n ${P && P[m] ? "s-plan" : "s-none"}">${P == null ? "-" : P[m]}</td>`).join("");
-      const ac = MONTHS.map((_,m) => {
-        const p = P ? P[m] : 0, v = D[m] || 0;
-        let cls = "s-none";
-        if (p && v >= p) cls = "s-ok";
-        else if (m < nowM && p) cls = v > 0 ? "s-watch" : "s-bad";
-        else if (m === nowM && v > 0) cls = "s-watch";
-        const pct = p ? Math.round(v / p * 100) + "%" : "";
-        return `<td class="n ${cls}" title="${esc(MONTHS[m] + ": ทำแล้ว " + v + " / แผน " + p + " เครื่อง")}">${m > nowM ? "" : v}${m <= nowM && p ? `<br><small>${pct}</small>` : ""}</td>`;
-      }).join("");
-      const tp = P ? P.reduce((a,b)=>a+b,0) : 0, td = D.reduce((a,b)=>a+b,0);
-      return `<tr class="pv-top"><td class="name" rowspan="2"><a href="?p=${h.code.toLowerCase()}">${esc(h.name)}</a><small>${h.machines == null ? "ยังไม่มี Master plan" : h.machines.toLocaleString() + " เครื่อง"}</small></td><td class="lbl">แผน</td>${pc}<td class="n"><b>${P ? tp.toLocaleString() : "-"}</b></td></tr><tr class="pv-bot"><td class="lbl">จริง</td>${ac}<td class="n"><b>${td.toLocaleString()}</b></td></tr>`;
-    }).join("");
-    $("grid").innerHTML = `<table class="month pva"><thead><tr><th>โรงพยาบาล</th><th></th>${MONTHS.map(m=>`<th>${m}</th>`).join("")}<th>รวม</th></tr></thead><tbody>${grid}</tbody></table>`;
-    $("gridLegend").innerHTML = `<span><i style="--c:var(--plan)"></i>แผน: จำนวนเครื่องที่ต้อง PM ตาม Master plan</span><span><i style="--c:var(--ok)"></i>ทำครบตามแผน</span><span><i style="--c:#FFD600"></i>ทำได้บางส่วน</span><span><i style="--c:var(--bad)"></i>ยังไม่มีบันทึก</span><span>จริง = จำนวนเครื่องที่วิศวกรบันทึกในฟอร์ม ข</span>`;
-  };
   $("app").innerHTML = `
     <div class="kpis">
       <div class="kpi"><b>${sum("contracts")}</b><span>สัญญา MA ทั้งหมด</span></div>
@@ -176,13 +157,13 @@ async function overview(){
       <p class="foot">ชี้ที่ช่องเพื่อดูรายชื่อสัญญา · แผนคำนวณจากวันเริ่มสัญญาและรอบเข้า PM ในทะเบียนสัญญา · ผลจริงจากการบันทึกการเข้า PM</p>
     </div>
     <div class="card">
-      <h2>แผนงาน PM รายเดือนทั้งปี ${d.year} — 12 โรง (จำนวนเครื่องตาม Master plan เทียบที่ทำจริง)</h2>
+      <h2>แผนงาน PM รายเดือนทั้งปี ${d.year} — 12 โรง (สัญญา / เครื่อง)</h2>
       <div class="legend" id="gridLegend"></div>
       <div class="tscroll" id="grid"></div>
     </div>
 `;
-  draw();
-  groupDash().catch(e => { $("pva").innerHTML = `<div class="msg err">โหลดไม่สำเร็จ: ${esc(e.message)}</div>`; });
+  $("grid").innerHTML = `<div class="loading">กำลังโหลด…</div>`;
+  groupDash(H).catch(e => { $("pva").innerHTML = `<div class="msg err">โหลดไม่สำเร็จ: ${esc(e.message)}</div>`; });
 }
 
 /* ---------- แผน vs ผลจริง (ระดับสัญญา) ---------- */
@@ -304,7 +285,31 @@ function pvaHtml(all, Y, gid){
   }).join("");
   return `<table class="month pva"><thead><tr><th>โรงพยาบาล</th><th></th>${MONTHS.map(m => `<th>${m}</th>`).join("")}<th>รวม</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
-async function groupDash(){
+function comboHtml(all, SUM, Y){
+  const f = n => (n || 0).toLocaleString();
+  const rows = all.map((h, i) => {
+    const [code, nm] = HOSP[i], S = SUM.find(x => x.code === code) || {};
+    const P = S.planned, D = S.done || Array(12).fill(0);
+    if (h.error || !h.contracts) return "";
+    const r = pvaHospital(h.contracts, Y);
+    const pc = MONTHS.map((_, m) => { const pcn = r.plan[m].length, pm = P ? P[m] : 0;
+      return `<td class="n ${pcn || pm ? "s-plan" : "s-none"}">${f(pcn)} <small>สัญญา</small><br>${P ? f(pm) : "-"} <small>เครื่อง</small></td>`; }).join("");
+    const ac = MONTHS.map((_, m) => {
+      const St = r.st[m], pcn = r.plan[m].length, acn = r.act[m].size, pm = P ? P[m] : 0, dm = D[m] || 0;
+      const cOk = St.miss.length === 0 && St.ok.length + St.watch.length >= pcn, mOk = dm >= pm;
+      let cls = "s-none";
+      if (m < nowM) cls = (pcn || pm) ? (!mOk || St.miss.length ? "s-bad" : St.watch.length ? "s-watch" : "s-ok") : (acn || dm ? "s-ok" : "s-none");
+      else if (m === nowM && (pcn || pm) && cOk && St.wait.length === 0 && mOk) cls = St.watch.length ? "s-watch" : "s-ok";
+      const t = `${MONTHS[m]}: สัญญา ${acn}/${pcn} · เครื่อง ${dm}/${pm}`;
+      return `<td class="n ${cls}" title="${esc(t)}">${m > nowM ? "" : `${f(acn)} <small>สัญญา</small><br>${f(dm)} <small>เครื่อง</small>`}</td>`;
+    }).join("");
+    const tpc = r.plan.reduce((a, x) => a + x.length, 0), tac = r.act.reduce((a, x) => a + x.size, 0);
+    const tpm = P ? P.reduce((a, b) => a + b, 0) : 0, tdm = D.reduce((a, b) => a + b, 0);
+    return `<tr class="pv-top"><td class="name" rowspan="2"><a href="?p=${code.toLowerCase()}">${esc(nm)}</a><small>${h.contracts.length} สัญญา · ${S.machines == null ? "ยังไม่มี Master plan" : f(S.machines) + " เครื่อง"}</small></td><td class="lbl">แผน</td>${pc}<td class="n"><b>${f(tpc)}</b> <small>สัญญา</small><br><b>${P ? f(tpm) : "-"}</b> <small>เครื่อง</small></td></tr><tr class="pv-bot"><td class="lbl">จริง</td>${ac}<td class="n"><b>${f(tac)}</b> <small>สัญญา</small><br><b>${f(tdm)}</b> <small>เครื่อง</small></td></tr>`;
+  }).join("");
+  return `<table class="month pva combo"><thead><tr><th>โรงพยาบาล</th><th></th>${MONTHS.map(m => `<th>${m}</th>`).join("")}<th>รวม</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+async function groupDash(SUM){
   const Y = new Date().getFullYear();
   const all = await Promise.all(HOSP.map(([c]) => api({ api: "hospital", p: c }).catch(e => ({ code: c, error: e.message }))));
   all.forEach(h => (h.contracts || []).forEach(c => { [c._g, c._k] = classify(c); }));
@@ -320,6 +325,8 @@ async function groupDash(){
     $("pva").innerHTML = pvaHtml(all, Y, gid);
   };
   draw();
+  $("grid").innerHTML = comboHtml(all, SUM || [], Y);
+  $("gridLegend").innerHTML = `<span><i style="--c:var(--plan)"></i>แผน: สัญญาที่ถึงรอบ / เครื่องตาม Master plan</span><span><i style="--c:var(--ok)"></i>ครบตามแผนทั้งสัญญาและเครื่อง</span><span><i style="--c:#FFD600"></i>เฝ้าระวัง: เครื่องครบ แต่มีสัญญาเข้าไม่ตรงเดือน</span><span><i style="--c:var(--bad)"></i>ต่ำกว่าแผน (สัญญาหรือเครื่อง)</span><span><i style="--c:var(--none)"></i>ยังไม่ถึง</span>`;
 }
 
 /* ---------- รายโรง ---------- */
