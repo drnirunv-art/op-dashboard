@@ -262,6 +262,8 @@ function classify(c){
   return ["other", 0];
 }
 const RANK = { "หมดอายุแล้ว":4, "ใกล้หมด":3, "ยังไม่มีวันที่":2, "ยังมีผล":1 };
+/* แท็บ "ทุกกลุ่ม": โรง × กลุ่ม 1–5 (ใช้ตารางแบบเดียวกัน โดยถือแต่ละกลุ่มเป็นหนึ่งคอลัมน์) */
+const ALLG = { id:"*", name:"ทุกกลุ่ม", items: GROUPS.map(g => [g.name, null]) };
 function matrixHtml(g, all){
   const used = k => all.some(h => (h.contracts || []).some(c => c._g === g.id && c._k === k));
   const vis = g.items.map((x, k) => k).filter(k => !g.items[k][2] || used(k));
@@ -269,7 +271,7 @@ function matrixHtml(g, all){
   const rows = all.map((h, i) => {
     const cs = h.contracts || [];
     const cells = vis.map(k => {
-      const m = cs.filter(c => c._g === g.id && c._k === k && c.status !== "ยกเลิก");
+      const m = cs.filter(c => (g.id === "*" ? c._g === GROUPS[k].id : c._g === g.id && c._k === k) && c.status !== "ยกเลิก");
       if (!h.contracts) return `<td class="n s-none">?</td>`;
       const must = g.must && !g.items[k][2];
       if (!m.length) return `<td class="n ${must ? "s-missing" : "s-none"}" title="ยังไม่พบสัญญาในทะเบียน">${must ? "ไม่มี" : "-"}</td>`;
@@ -340,8 +342,8 @@ async function groupDash(SUM){
     $("gtabs").innerHTML = `<button data-g="">ทุกกลุ่ม</button>` + GROUPS.map(g => `<button data-g="${g.id}">${esc(g.name)} <small>(${cnt(g.id)})</small></button>`).join("");
     document.querySelectorAll("[data-g]").forEach(b => { b.setAttribute("aria-selected", b.dataset.g === gid); b.onclick = () => { gid = b.dataset.g; try { localStorage.setItem("pmma-group", gid); } catch (e) {} draw(); }; });
     const g = GROUPS.find(x => x.id === gid);
-    $("gdesc").textContent = g ? g.desc : "รวมทุกสัญญา เลือกกลุ่มด้านบนเพื่อดูสถานะสัญญาแยกตามรายการของแต่ละโรง · กลุ่มอ่านจากคอลัมน์ \"กลุ่มงาน\" ในทะเบียนสัญญาของแต่ละโรง (แก้ในไฟล์ได้)";
-    $("gmatrix").innerHTML = g ? matrixHtml(g, all) : "";
+    $("gdesc").textContent = g ? g.desc : "ภาพรวมทุกกลุ่ม: ตัวเลข = จำนวนสัญญาในกลุ่ม สีช่อง = สถานะที่แย่ที่สุดในกลุ่ม · กดแท็บกลุ่มเพื่อดูแยกรายการ · กลุ่มอ่านจากคอลัมน์ \"กลุ่มงาน\" ในทะเบียนสัญญาของแต่ละโรง (แก้ในไฟล์ได้)";
+    $("gmatrix").innerHTML = g ? matrixHtml(g, all) : matrixHtml(ALLG, all);
     $("pva").innerHTML = pvaHtml(all, Y, gid);
     $("pvaG").textContent = g ? "— " + g.name : "— ทุกกลุ่ม";
   };
