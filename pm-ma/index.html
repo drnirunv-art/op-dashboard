@@ -58,7 +58,7 @@ td.name small{display:block;font-weight:400}
 .s-miss{background:var(--miss);color:var(--miss-ink)} .s-part{background:var(--part);color:var(--part-ink)}
 .s-none{background:var(--none);color:var(--none-ink)}
 .s-watch{background:#FFD600;color:#3d3300} .s-missing{background:var(--panel);color:var(--bad);box-shadow:inset 0 0 0 2px var(--bad);font-weight:600}
-h3.sub{font-size:15px;margin:18px 0 8px} table.gm th{min-width:92px;font-size:12px} .s-plan{background:var(--plan);color:var(--plan-ink)}
+h3.sub{font-size:15px;margin:18px 0 8px} table.combo td.n{font-size:12.5px;line-height:1.35;min-width:74px} table.combo td.n small{font-size:10.5px;color:inherit;opacity:.85} table.gm th{min-width:92px;font-size:12px} .s-plan{background:var(--plan);color:var(--plan-ink)}
 td.lbl{font-size:12px;color:var(--muted);text-align:center;white-space:nowrap;background:transparent}
 table.pva tr.pv-bot td{padding-bottom:7px} table.pva tr.pv-top td.n{border-bottom:2px solid var(--panel)}
 table.pva tbody tr.pv-top td{border-top:6px solid transparent}
@@ -130,48 +130,20 @@ async function overview(){
   const d = await api({ api: "summary" });
   const H = d.hospitals, sum = k => H.reduce((a,h) => a + (h[k]||0), 0);
   const plannedM = H.reduce((a,h) => a + (h.planned ? h.planned[nowM] : 0), 0);
-  const visitM = H.reduce((a,h) => a + h.visits[nowM], 0);
-  let view = "plan";
-  const draw = () => {
-    const grid = H.map(h => {
-      const cells = MONTHS.map((_,m) => {
-        const p = h.planned ? h.planned[m] : null, v = h.visits[m];
-        if (view === "plan") return `<td class="n ${p ? "s-part" : "s-none"}">${p == null ? "-" : p}</td>`;
-        const cls = m > nowM ? "s-none" : v > 0 ? "s-ok" : (p ? "s-miss" : "s-none");
-        return `<td class="n ${cls}">${v}</td>`;
-      }).join("");
-      const tot = view === "plan" ? (h.planned ? h.planned.reduce((a,b)=>a+b,0) : "-") : h.visits.reduce((a,b)=>a+b,0);
-      return `<tr><td class="name"><a href="?p=${h.code.toLowerCase()}">${esc(h.name)}</a><small>${h.machines == null ? "ยังไม่มี Master plan" : h.machines.toLocaleString() + " เครื่อง"}</small></td>${cells}<td class="n"><b>${tot}</b></td></tr>`;
-    }).join("");
-    $("grid").innerHTML = `<table class="month"><thead><tr><th>โรงพยาบาล</th>${MONTHS.map(m=>`<th>${m}</th>`).join("")}<th>รวม</th></tr></thead><tbody>${grid}</tbody></table>`;
-    $("gridLegend").innerHTML = view === "plan"
-      ? `<span><i style="--c:var(--part)"></i>จำนวนงาน PM ตามตาราง MA (ครั้ง/เดือน)</span>`
-      : `<span><i style="--c:var(--ok)"></i>มีผู้รับเหมาเข้า PM</span><span><i style="--c:var(--miss)"></i>มีงานตามแผนแต่ยังไม่มีบันทึก</span><span><i style="--c:var(--none)"></i>ไม่มีงาน / ยังไม่ถึง</span>`;
-    document.querySelectorAll("[data-v]").forEach(b => b.setAttribute("aria-selected", b.dataset.v === view));
-  };
+  const visitM = H.reduce((a,h) => a + ((h.done || [])[nowM] || 0), 0);
   $("app").innerHTML = `
     <div class="kpis">
       <div class="kpi"><b>${sum("contracts")}</b><span>สัญญา MA ทั้งหมด</span></div>
       <div class="kpi warn"><b>${sum("renew")}</b><span>รอต่อสัญญา (≤90 วัน / หมดแล้วยังไม่ PO)</span></div>
       <div class="kpi bad"><b>${sum("expired")}</b><span>สัญญาหมดอายุแล้ว</span></div>
       <div class="kpi warn"><b>${sum("overdue")}</b><span>ผู้รับเหมาขาดรอบ PM</span></div>
-      <div class="kpi"><b>${visitM} / ${plannedM.toLocaleString()}</b><span>เข้า PM เดือนนี้ / งานตามตาราง MA</span></div>
+      <div class="kpi"><b>${visitM} / ${plannedM.toLocaleString()}</b><span>เครื่องที่ทำ PM เดือนนี้ / แผนตาม Master plan</span></div>
     </div>
     <div class="card">
       <h2>แดชบอร์ดแยกกลุ่มงาน MA ปี ${d.year}</h2>
       <div class="tabs" id="gtabs"></div>
       <div id="gdesc" class="muted" style="margin:-6px 0 10px"></div>
       <div id="gmatrix"></div>
-      <h3 class="sub">แผนเทียบผลจริงรายเดือน (นับเป็นจำนวนสัญญา)</h3>
-      <div class="legend"><span><i style="--c:var(--plan)"></i>แผน: สัญญาที่ต้องเข้า PM ในเดือนนั้น</span><span><i style="--c:var(--ok)"></i>เข้าครบตามแผน</span><span><i style="--c:#FFD600"></i>เฝ้าระวัง: มี PO และเข้าจริง แต่ไม่ตรงเดือน</span><span><i style="--c:var(--bad)"></i>ไม่ได้เข้าตามแผน</span><span><i style="--c:var(--none)"></i>ยังไม่ถึง / ไม่มีแผน</span><span>✓ ผู้รับเหมายืนยันนัดแล้ว · ⏳ รอตอบ · ⚠ ขอเลื่อน/ไม่เข้า</span></div>
-      <div class="tscroll" id="pva"><div class="loading">กำลังโหลดข้อมูลสัญญา 12 โรง…</div></div>
-      <p class="foot">ชี้ที่ช่องเพื่อดูรายชื่อสัญญา · แผนคำนวณจากวันเริ่มสัญญาและรอบเข้า PM ในทะเบียนสัญญา · ผลจริงจากการบันทึกการเข้า PM</p>
-    </div>
-    <div class="card">
-      <h2>รายงานรายเดือนทั้งปี ${d.year} — 12 โรง</h2>
-      <div class="tabs"><button data-v="plan">งานตามตาราง MA</button><button data-v="visit">ผู้รับเหมาเข้า PM จริง</button></div>
-      <div class="legend" id="gridLegend"></div>
-      <div class="tscroll" id="grid"></div>
     </div>
     <div class="card">
       <h2>สถานะสัญญา MA รายโรง</h2>
@@ -179,10 +151,21 @@ async function overview(){
       ${H.map(h => `<tr><td class="name"><a href="?p=${h.code.toLowerCase()}">${esc(h.name)}</a></td><td class="n">${h.contracts}</td><td class="n ${h.active?"s-ok":""}">${h.active}</td><td class="n ${h.soon?"s-miss":""}">${h.soon}</td><td class="n ${h.expired?"s-bad":""}">${h.expired}</td><td class="n ${h.noDate?"s-none":""}">${h.noDate}</td><td class="n ${h.renew?"s-part":""}">${h.renew}</td><td class="n ${h.overdue?"s-miss":""}">${h.overdue}</td></tr>`).join("")}
       </tbody></table></div>
       <p class="foot">อัปเดต ${esc(d.generated)} · ข้อมูลจากโฟลเดอร์ PM MA Master plan ใน Google Drive</p>
-    </div>`;
-  document.querySelectorAll("[data-v]").forEach(b => b.onclick = () => { view = b.dataset.v; draw(); });
-  draw();
-  groupDash().catch(e => { $("pva").innerHTML = `<div class="msg err">โหลดไม่สำเร็จ: ${esc(e.message)}</div>`; });
+    </div>
+    <div class="card">
+      <h2>แผนงาน PM รายเดือนทั้งปี ${d.year} — 12 โรง (สัญญา / เครื่อง)</h2>
+      <div class="legend" id="gridLegend"></div>
+      <div class="tscroll" id="grid"></div>
+    </div>
+    <div class="card">
+      <h2>แผนเทียบผลจริงรายเดือน (นับเป็นจำนวนสัญญา) <small id="pvaG" class="muted"></small></h2>
+      <div class="legend"><span><i style="--c:var(--plan)"></i>แผน: สัญญาที่ต้องเข้า PM ในเดือนนั้น</span><span><i style="--c:var(--ok)"></i>เข้าครบตามแผน</span><span><i style="--c:#FFD600"></i>เฝ้าระวัง: มี PO และเข้าจริง แต่ไม่ตรงเดือน</span><span><i style="--c:var(--bad)"></i>ไม่ได้เข้าตามแผน</span><span><i style="--c:var(--none)"></i>ยังไม่ถึง / ไม่มีแผน</span><span>✓ ผู้รับเหมายืนยันนัดแล้ว · ⏳ รอตอบ · ⚠ ขอเลื่อน/ไม่เข้า</span></div>
+      <div class="tscroll" id="pva"><div class="loading">กำลังโหลดข้อมูลสัญญา 12 โรง…</div></div>
+      <p class="foot">ชี้ที่ช่องเพื่อดูรายชื่อสัญญา · แผนคำนวณจากวันเริ่มสัญญาและรอบเข้า PM ในทะเบียนสัญญา · ผลจริงจากการบันทึกการเข้า PM</p>
+    </div>
+`;
+  $("grid").innerHTML = `<div class="loading">กำลังโหลด…</div>`;
+  groupDash(H).catch(e => { $("pva").innerHTML = `<div class="msg err">โหลดไม่สำเร็จ: ${esc(e.message)}</div>`; });
 }
 
 /* ---------- แผน vs ผลจริง (ระดับสัญญา) ---------- */
@@ -233,45 +216,65 @@ const GROUPS = [
     ["ตรวจสมรรถนะ Generator", new RegExp(`((${INSP}).*(gen|เครื่องกำเนิด))|((gen|เครื่องกำเนิด).*(${INSP}))`, "i")],
     ["ตรวจสมรรถนะ Fire pump", new RegExp(`((${INSP}).*(fire ?pump|สูบน้ำดับเพลิง))|((fire ?pump|สูบน้ำดับเพลิง).*(${INSP}))`, "i")],
     ["ล้างถังเก็บน้ำ ใต้ดิน / บนหลังคา", /ล้าง.*ถัง|ถังเก็บน้ำ|tank ?clean|roof ?tank|under ?ground/i],
-    ["MA บ่อบำบัดน้ำเสีย (WWTP)", /บำบัด|wwtp|น้ำเสีย/i],
+    ["MA บ่อบำบัดน้ำเสีย (WWTP)", /บ่อบำบัด|บำบัดน้ำเสีย|wwtp|น้ำเสีย/i],
     ["ตรวจสอบลิฟต์", new RegExp(`(${INSP}).*(ลิฟ|lift|elevator)`, "i")],
-    ["ตรวจระบบก๊าซประจำปี (เสนอเพิ่ม)", /ก๊าซ|แก๊ส|lpg|\bgas\b/i],
-    ["ตรวจหม้อไอน้ำ Boiler (เสนอเพิ่ม)", /boiler|หม้อไอน้ำ/i]]},
+    ["ตรวจระบบก๊าซประจำปี (เสนอเพิ่ม)", /(?<!ดับเพลิง\S*)(ก๊าซ|แก๊ส)(?!.*(fm ?200|ดับเพลิง))|lpg|\bgas\b/i],
+    ["ตรวจหม้อไอน้ำ Boiler (เสนอเพิ่ม)", /boiler|หม้อไอน้ำ/i],
+    ["อื่นๆ ในกลุ่มนี้", /(?!)/, true]]},
   { id:"avail", name:"2. ความพร้อมใช้เครื่องจักร (มาตรฐาน)", desc:"ไม่ได้ระบุในกฎหมาย แต่มาตรฐานกำหนดให้ทำทุกปี: ล้างแอร์ ล้าง Tube Chiller และ PM รายปีของเครื่องจักรทุกเครื่อง รวม UPS", items:[
     ["Chiller (MA / ล้าง Tube)", /chiller|ชิลเลอร์|ล้าง ?tube/i],
     ["Cooling Tower", /cooling|คูลลิ่ง/i],
     ["ระบบปรับอากาศ / ล้างแอร์ / AHU", /hvac|ปรับอากาศ|แอร์|ahu|fcu|split|vrf|ท่อลมเย็น/i],
     ["Fire Pump (MA)", /fire ?pump|สูบน้ำดับเพลิง/i],
     ["Generator (MA)", /\bgen|generator|เครื่องกำเนิด/i],
-    ["FM200 / Clean Agent", /fm ?200|novec|clean ?agent|สารสะอาด|ดับเพลิงอัตโนมัติ/i],
+    ["FM200 / Clean Agent / ดับเพลิงครัว", /fm ?200|novec|clean ?agent|สารสะอาด|ดับเพลิงอัตโนมัติ|ดับเพลิงครัว/i],
     ["UPS", /\bups\b/i],
-    ["Fire Alarm", /fire ?alarm|ไฟอลาม|แจ้งเหตุเพลิง/i],
-    ["Heat pump / น้ำร้อน", /heat ?pump|น้ำร้อน/i],
-    ["ระบบน้ำ / ปั๊มน้ำ / RO", /ปั๊มน้ำ|ระบบน้ำ|ประปา|\bro\b|water ?pump|softener/i]]},
+    ["Fire Alarm / Detector / Sprinkler", /fire ?alarm|ไฟอลาม|แจ้งเหตุ|smoke|heat ?detector|sprinkler|ประตูหนีไฟ/i],
+    ["Heat pump / น้ำร้อน", /heat\s*pump|น้ำร้อน/i],
+    ["ระบบน้ำ / ปั๊มน้ำ / RO / น้ำดื่ม", /ปั๊มน้ำ|ระบบน้ำ|ประปา|\bro\b|water ?pump|softener|น้ำดื่ม|กรองน้ำ|น้ำบริสุทธิ์|สุขภัณฑ์|ห้องน้ำ/i],
+    ["ระบบไฟฟ้า (TR / MDB / ATS / HV / DB)", /หม้อแปลง|\btr\b|mdb|acb|\bats\b|rmu|ring main|capacitor|switchgear|แรงสูง|busway|\bdb\b|sdb|load center|mccb|กราวด์|ล่อฟ้า|solar|lighting|ไฟฟ้า/i],
+    ["ห้องปลอดเชื้อ / Clean room / HEPA", /clean ?room|ปลอดเชื้อ|hepa/i],
+    ["อื่นๆ ในกลุ่มนี้", /(?!)/, true]]},
   { id:"lift", name:"3. ลิฟต์และระบบขนส่ง", desc:"MA ลิฟต์รายเดือน บันไดเลื่อน ท่อลม รถจ่ายยา", items:[
     ["ลิฟต์ / บันไดเลื่อน (MA)", /ลิฟ|lift|elevator|escalator|บันไดเลื่อน|dumbwaiter/i],
     ["ท่อลมรับส่งเอกสาร", /ท่อลม|pneumatic/i],
-    ["รถขนส่ง / รถจ่ายยา", /รถจ่ายยา|agv|รถขนส่ง/i]]},
+    ["รถขนส่ง / รถจ่ายยา", /รถจ่ายยา|agv|รถขนส่ง/i],
+    ["ประตูอัตโนมัติ", /ประตูอัตโนมัติ|auto ?door/i],
+    ["อื่นๆ ในกลุ่มนี้", /(?!)/, true]]},
   { id:"comm", name:"4. สื่อสารและควบคุม", desc:"โทรศัพท์ เครื่องเสียง ทีวี ระบบเฝ้าระวัง", items:[
-    ["โทรศัพท์", /โทรศัพท์|pabx|telephone/i],
+    ["โทรศัพท์", /โทรศัพ|pabx|telephone/i],
     ["เครื่องเสียง / ประกาศ / ทีวี", /เครื่องเสียง|ประกาศ|ทีวี|\btv\b|เคเบิล/i],
-    ["BMS / Power meter / เฝ้าระวัง", /bms|power ?meter|เฝ้าระวัง|monitor|cctv|nurse ?call|access/i]]},
+    ["BMS / Power meter / เฝ้าระวัง", /bms|power ?meter|เฝ้าระวัง|monitor|cctv|nurse ?call|access/i],
+    ["อื่นๆ ในกลุ่มนี้", /(?!)/, true]]},
   { id:"other", name:"5. อื่นๆ ยังไม่จัดกลุ่ม", desc:"สัญญาที่ระบบจัดกลุ่มอัตโนมัติไม่ได้ ตรวจแล้วแจ้งเพิ่มคำค้นได้", items:[["อื่นๆ", /.*/]]}
 ];
+/* กลุ่มงานอ่านจากคอลัมน์ "กลุ่มงาน" ในทะเบียนสัญญาของแต่ละโรงก่อน (ขึ้นต้นด้วยเลข 1–5) ถ้าว่างจึงจัดกลุ่มอัตโนมัติจากคำค้น */
 function classify(c){
   const t = [c.sys, c.scope, c.n].filter(Boolean).join(" ");
+  const m = /^\s*([1-5])/.exec(c.group || "");
+  if (m) {
+    const g = GROUPS[+m[1] - 1];
+    let k = g.items.findIndex(x => x[1].test(t));
+    if (k < 0) k = g.items.length - 1;
+    return [g.id, k];
+  }
   for (const g of GROUPS) for (let k = 0; k < g.items.length; k++) if (g.id !== "other" && g.items[k][1].test(t)) return [g.id, k];
   return ["other", 0];
 }
 const RANK = { "หมดอายุแล้ว":4, "ใกล้หมด":3, "ยังไม่มีวันที่":2, "ยังมีผล":1 };
+/* แท็บ "ทุกกลุ่ม": โรง × กลุ่ม 1–5 (ใช้ตารางแบบเดียวกัน โดยถือแต่ละกลุ่มเป็นหนึ่งคอลัมน์) */
+const ALLG = { id:"*", name:"ทุกกลุ่ม", items: GROUPS.map(g => [g.name, null]) };
 function matrixHtml(g, all){
-  const cols = g.items.map(x => `<th>${esc(x[0])}</th>`).join("");
+  const used = k => all.some(h => (h.contracts || []).some(c => c._g === g.id && c._k === k));
+  const vis = g.items.map((x, k) => k).filter(k => !g.items[k][2] || used(k));
+  const cols = vis.map(k => `<th>${esc(g.items[k][0])}</th>`).join("");
   const rows = all.map((h, i) => {
     const cs = h.contracts || [];
-    const cells = g.items.map((x, k) => {
-      const m = cs.filter(c => c._g === g.id && c._k === k && c.status !== "ยกเลิก");
+    const cells = vis.map(k => {
+      const m = cs.filter(c => (g.id === "*" ? c._g === GROUPS[k].id : c._g === g.id && c._k === k) && c.status !== "ยกเลิก");
       if (!h.contracts) return `<td class="n s-none">?</td>`;
-      if (!m.length) return `<td class="n ${g.must ? "s-missing" : "s-none"}" title="ยังไม่พบสัญญาในทะเบียน">${g.must ? "ไม่มี" : "-"}</td>`;
+      const must = g.must && !g.items[k][2];
+      if (!m.length) return `<td class="n ${must ? "s-missing" : "s-none"}" title="ยังไม่พบสัญญาในทะเบียน">${must ? "ไม่มี" : "-"}</td>`;
       const w = m.reduce((a, c) => (RANK[c.status]||0) > (RANK[a]||0) ? c.status : a, "ยังมีผล");
       const ren = m.filter(c => c.renew).length;
       const t = m.map(c => `${c.scope || c.sys} — ${c.vendor || "-"} — ${c.status}${c.end ? " (สิ้นสุด " + thd(c.end) + ")" : ""}`).join("\n");
@@ -304,7 +307,31 @@ function pvaHtml(all, Y, gid){
   }).join("");
   return `<table class="month pva"><thead><tr><th>โรงพยาบาล</th><th></th>${MONTHS.map(m => `<th>${m}</th>`).join("")}<th>รวม</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
-async function groupDash(){
+function comboHtml(all, SUM, Y){
+  const f = n => (n || 0).toLocaleString();
+  const rows = all.map((h, i) => {
+    const [code, nm] = HOSP[i], S = SUM.find(x => x.code === code) || {};
+    const P = S.planned, D = S.done || Array(12).fill(0);
+    if (h.error || !h.contracts) return "";
+    const r = pvaHospital(h.contracts, Y);
+    const pc = MONTHS.map((_, m) => { const pcn = r.plan[m].length, pm = P ? P[m] : 0;
+      return `<td class="n ${pcn || pm ? "s-plan" : "s-none"}">${f(pcn)} <small>สัญญา</small><br>${P ? f(pm) : "-"} <small>เครื่อง</small></td>`; }).join("");
+    const ac = MONTHS.map((_, m) => {
+      const St = r.st[m], pcn = r.plan[m].length, acn = r.act[m].size, pm = P ? P[m] : 0, dm = D[m] || 0;
+      const cOk = St.miss.length === 0 && St.ok.length + St.watch.length >= pcn, mOk = dm >= pm;
+      let cls = "s-none";
+      if (m < nowM) cls = (pcn || pm) ? (!mOk || St.miss.length ? "s-bad" : St.watch.length ? "s-watch" : "s-ok") : (acn || dm ? "s-ok" : "s-none");
+      else if (m === nowM && (pcn || pm) && cOk && St.wait.length === 0 && mOk) cls = St.watch.length ? "s-watch" : "s-ok";
+      const t = `${MONTHS[m]}: สัญญา ${acn}/${pcn} · เครื่อง ${dm}/${pm}`;
+      return `<td class="n ${cls}" title="${esc(t)}">${m > nowM ? "" : `${f(acn)} <small>สัญญา</small><br>${f(dm)} <small>เครื่อง</small>`}</td>`;
+    }).join("");
+    const tpc = r.plan.reduce((a, x) => a + x.length, 0), tac = r.act.reduce((a, x) => a + x.size, 0);
+    const tpm = P ? P.reduce((a, b) => a + b, 0) : 0, tdm = D.reduce((a, b) => a + b, 0);
+    return `<tr class="pv-top"><td class="name" rowspan="2"><a href="?p=${code.toLowerCase()}">${esc(nm)}</a><small>${h.contracts.length} สัญญา · ${S.machines == null ? "ยังไม่มี Master plan" : f(S.machines) + " เครื่อง"}</small></td><td class="lbl">แผน</td>${pc}<td class="n"><b>${f(tpc)}</b> <small>สัญญา</small><br><b>${P ? f(tpm) : "-"}</b> <small>เครื่อง</small></td></tr><tr class="pv-bot"><td class="lbl">จริง</td>${ac}<td class="n"><b>${f(tac)}</b> <small>สัญญา</small><br><b>${f(tdm)}</b> <small>เครื่อง</small></td></tr>`;
+  }).join("");
+  return `<table class="month pva combo"><thead><tr><th>โรงพยาบาล</th><th></th>${MONTHS.map(m => `<th>${m}</th>`).join("")}<th>รวม</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+async function groupDash(SUM){
   const Y = new Date().getFullYear();
   const all = await Promise.all(HOSP.map(([c]) => api({ api: "hospital", p: c }).catch(e => ({ code: c, error: e.message }))));
   all.forEach(h => (h.contracts || []).forEach(c => { [c._g, c._k] = classify(c); }));
@@ -315,11 +342,15 @@ async function groupDash(){
     $("gtabs").innerHTML = `<button data-g="">ทุกกลุ่ม</button>` + GROUPS.map(g => `<button data-g="${g.id}">${esc(g.name)} <small>(${cnt(g.id)})</small></button>`).join("");
     document.querySelectorAll("[data-g]").forEach(b => { b.setAttribute("aria-selected", b.dataset.g === gid); b.onclick = () => { gid = b.dataset.g; try { localStorage.setItem("pmma-group", gid); } catch (e) {} draw(); }; });
     const g = GROUPS.find(x => x.id === gid);
-    $("gdesc").textContent = g ? g.desc : "รวมทุกสัญญา เลือกกลุ่มด้านบนเพื่อดูสถานะสัญญาแยกตามรายการของแต่ละโรง";
-    $("gmatrix").innerHTML = g ? matrixHtml(g, all) : "";
+    $("gdesc").textContent = g ? g.desc : "ภาพรวมทุกกลุ่ม: ตัวเลข = จำนวนสัญญาในกลุ่ม สีช่อง = สถานะที่แย่ที่สุดในกลุ่ม · กดแท็บกลุ่มเพื่อดูแยกรายการ · กลุ่มอ่านจากคอลัมน์ \"กลุ่มงาน\" ในทะเบียนสัญญาของแต่ละโรง (แก้ในไฟล์ได้)";
+    $("gmatrix").innerHTML = g ? matrixHtml(g, all) : `<h3 class="sub">สรุปรวม 5 กลุ่ม</h3>` + matrixHtml(ALLG, all) +
+      GROUPS.map(x => `<h3 class="sub">${esc(x.name)} <small class="muted">(${cnt(x.id)} สัญญา)</small></h3><p class="muted" style="margin:-4px 0 6px">${esc(x.desc)}</p>` + matrixHtml(x, all)).join("");
     $("pva").innerHTML = pvaHtml(all, Y, gid);
+    $("pvaG").textContent = g ? "— " + g.name : "— ทุกกลุ่ม";
   };
   draw();
+  $("grid").innerHTML = comboHtml(all, SUM || [], Y);
+  $("gridLegend").innerHTML = `<span><i style="--c:var(--plan)"></i>แผน: สัญญาที่ถึงรอบ / เครื่องตาม Master plan</span><span><i style="--c:var(--ok)"></i>ครบตามแผนทั้งสัญญาและเครื่อง</span><span><i style="--c:#FFD600"></i>เฝ้าระวัง: เครื่องครบ แต่มีสัญญาเข้าไม่ตรงเดือน</span><span><i style="--c:var(--bad)"></i>ต่ำกว่าแผน (สัญญาหรือเครื่อง)</span><span><i style="--c:var(--none)"></i>ยังไม่ถึง</span>`;
 }
 
 /* ---------- รายโรง ---------- */
@@ -424,6 +455,7 @@ function recordHtml(C, steps, confirm){
       <label>เข้าตรงตามนัดหรือไม่</label><select id="vO"><option>ตรงตามนัด</option><option>ไม่ตรงตามนัด</option><option>ไม่ได้นัดล่วงหน้า</option></select>
       <label>ช่างผู้รับเหมา (ชื่อหัวหน้าทีม)</label><input id="vTe">
       <label>จำนวนช่าง (คน)</label><input id="vN" inputmode="numeric">
+      <label>จำนวนเครื่องที่ทำ PM ครั้งนี้</label><input id="vMa" inputmode="numeric" placeholder="ใช้เทียบกับแผนตาม Master plan">
       <label>รายการ / เครื่องที่ตรวจ</label><input id="vT" placeholder="เช่น PM ประจำเดือน ลิฟต์ No.1-3">
       <label>ผลการตรวจ</label><select id="vR"><option>ปกติ</option><option>พบปัญหา แก้ไขแล้ว</option><option>พบปัญหา รอแก้ไข</option></select>
       <label>ปัญหาที่พบ (ถ้ามี)</label><input id="vP">
@@ -456,7 +488,7 @@ function recordHtml(C, steps, confirm){
   $("vK").onchange = () => { $("vV").value = live[$("vK").value].vendor || ""; };
   $("aK").onchange(); $("vK").onchange();
   $("aSave").onclick = () => { const c = live[$("aK").value]; go($("aSave"), "aMsg", "apptAdd", { key:c.key, vendor:$("aV").value || c.vendor, month:$("aM").value, date:$("aD").value, status:$("aS").value, newDate:$("aN").value, ref:$("aR").value, note:$("aT").value, by:$("aB").value }); };
-  $("vS").onclick = () => { const c = live[$("vK").value]; go($("vS"), "vM", "visitAdd", { key:c.key, vendor:$("vV").value || c.vendor, date:$("vD").value, detail:$("vT").value, result:$("vR").value, link:$("vL").value, by:$("vB").value, onTime:$("vO").value, tech:$("vTe").value, techN:$("vN").value, problem:$("vP").value, quote:$("vQ").value, sup:$("vSu").value }); };
+  $("vS").onclick = () => { const c = live[$("vK").value]; go($("vS"), "vM", "visitAdd", { key:c.key, vendor:$("vV").value || c.vendor, date:$("vD").value, detail:$("vT").value, result:$("vR").value, link:$("vL").value, by:$("vB").value, onTime:$("vO").value, tech:$("vTe").value, techN:$("vN").value, problem:$("vP").value, quote:$("vQ").value, sup:$("vSu").value, machines:$("vMa").value }); };
   $("pSave").onclick = () => { const c = live[$("pK").value]; go($("pSave"), "pM", "procAdd", { key:c.key, vendor:c.vendor, step:$("pS").value, date:$("pD").value, doc:$("pN").value, seller:$("pV").value, price:$("pP").value, note:$("pR").value, by:$("pB").value }); };
 }
 
