@@ -25,7 +25,15 @@ main{max-width:1200px;margin:0 auto;padding:14px 16px 110px}
 .kpi .v{font-size:24px;font-weight:700}
 .kpi.pts{background:var(--green2)} .kpi.ps2{background:var(--purple2)} .kpi.tot{background:#fbf7d6} .kpi.cl{background:var(--amber2)}
 .status{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600}
-.s-ok{background:var(--green2);color:var(--green)} .s-no{background:var(--amber2);color:var(--amber)}
+.s-ok{background:var(--green2);color:var(--green)} .s-no{background:var(--amber2);color:var(--amber)} .s-bad{background:var(--red2);color:var(--red)}
+.ctx{max-width:1200px;margin:12px auto 0;padding:0 16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.ctx select{font:inherit;padding:8px 10px;border-radius:8px;border:1px solid var(--line);min-width:240px}
+.ctx .btn{padding:8px 14px}
+.mini{font:inherit;font-size:12px;font-weight:600;border:1px solid var(--blue);color:var(--blue);background:#fff;border-radius:8px;padding:4px 10px;cursor:pointer;white-space:nowrap}
+.rep{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;overflow-x:auto}
+.rep table{width:auto;border-radius:0}
+.txt{white-space:pre-wrap;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;font-size:14px}
+@media print{header,.ctx,.savebar,.noprint{display:none!important}main{padding:0}}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:10px}
 .ward{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
 .ward.warn{border-color:var(--red);box-shadow:0 0 0 2px var(--red2)}
@@ -75,6 +83,7 @@ h2{font-size:16px;margin:18px 0 8px}
   </div>
   <div class="tabs" id="tabs"></div>
 </header>
+<div class="ctx hide" id="ctx"></div>
 <main id="main"><div class="loading">กำลังโหลด...</div></main>
 <div class="savebar hide" id="savebar"><span class="msg" id="msg"></span><button class="btn" id="save">บันทึกข้อมูลวันนี้</button></div>
 <script>
@@ -82,7 +91,8 @@ var API_URL = "https://script.google.com/macros/s/AKfycbyYtbn87iQjK2qkcmNzVPIXfa
 var Q = new URLSearchParams(location.search);
 var BOOT = { mode: Q.get('view')==='admin'?'admin':'entry', code: Q.get('h')||'', token: Q.get('t')||'' };
 var $ = function(id){return document.getElementById(id)};
-var state = {rows:[], wards:[], view:'entry', sel:null};
+var state = {rows:[], wards:[], view:'entry', sel:null, av:'ov'};
+var CUR = {};
 function num(v){var n=parseFloat(v);return isNaN(n)?0:n}
 function pct(a,b){return b>0?(a/b*100).toFixed(2)+'%':'-'}
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
@@ -91,11 +101,12 @@ function thDate(s){var p=s.split('-');var m=['ม.ค.','ก.พ.','มี.ค.'
 function calc(r){var usable=num(r.ready)-num(r.repair)-num(r.renovate);var remain=num(r.ready)-num(r.census)-num(r.repair)-num(r.renovate);return {usable:usable,remain:remain,rate:usable>0?num(r.census)/usable:(num(r.census)>0?Infinity:0)}}
 function totals(rows,b){var t={ready:0,census:0,usable:0,remain:0,repair:0,renovate:0};rows.forEach(function(r){if(r.include==='ไม่')return;if(b&&r.building!==b)return;var c=calc(r);t.ready+=num(r.ready);t.census+=num(r.census);t.usable+=c.usable;t.remain+=c.remain;t.repair+=num(r.repair);t.renovate+=num(r.renovate)});return t}
 
-$('reload').onclick = function(){ BOOT.mode==='admin'?loadOverview():loadDay(); };
+$('reload').onclick = function(){ if(BOOT.mode==='admin'&&state.av==='ov')return loadOverview(); if(BOOT.mode==='admin'&&state.av==='rep')return loadReport(); state.view==='set'?loadWards():loadDay(); };
 $('date').onchange = $('reload').onclick;
 
 // ================= ENTRY MODE =================
 function initEntry(){
+  CUR=BOOT;
   $('title').textContent = 'กรอกข้อมูลเตียงประจำวัน';
   $('sub').textContent = BOOT.name + ' · ข้อมูล ณ 7.00 น.';
   $('tabs').innerHTML = '<button class="on" data-v="entry">กรอกรายวัน</button><button data-v="set">ตั้งค่า Ward ประจำ</button>';
@@ -107,7 +118,7 @@ function loadDay(){
   state.view='entry';
   $('main').innerHTML='<div class="loading">กำลังโหลด...</div>';
   $('savebar').classList.remove('hide'); $('save').textContent='บันทึกข้อมูลวันที่ '+thDate($('date').value); $('msg').textContent='';
-  call('getDay',BOOT.code,BOOT.token,$('date').value).then(function(d){
+  call('getDay',CUR.code,CUR.token,$('date').value).then(function(d){
     state.rows=d.rows;
     $('stat').innerHTML = d.saved?'<span class="status s-ok">บันทึกแล้ว · แก้ไขแล้วกดบันทึกซ้ำได้</span>':'<span class="status s-no">ยังไม่บันทึก</span>';
     renderEntry();
@@ -145,48 +156,84 @@ function saveDay(){
   var miss=state.rows.filter(function(r){return r.census===''||r.census==null}).length;
   if(miss&&!confirm('ยังไม่ได้กรอกครองเตียง '+miss+' Ward (จะบันทึกเป็น 0) ต้องการบันทึกต่อหรือไม่?'))return;
   $('save').disabled=true;$('msg').textContent='กำลังบันทึก...';
-  call('saveDay',BOOT.code,BOOT.token,$('date').value,state.rows).then(function(r){$('save').disabled=false;$('msg').innerHTML='<span class="status s-ok">บันทึกแล้ว '+r.count+' Ward</span>';$('stat').innerHTML='<span class="status s-ok">บันทึกแล้ว · '+esc(r.at)+'</span>'}).catch(function(e){$('save').disabled=false;err(e)});
+  call('saveDay',CUR.code,CUR.token,$('date').value,state.rows).then(function(r){$('save').disabled=false;$('msg').innerHTML='<span class="status s-ok">บันทึกแล้ว '+r.count+' Ward</span>';$('stat').innerHTML='<span class="status s-ok">บันทึกแล้ว · '+esc(r.at)+'</span>'}).catch(function(e){$('save').disabled=false;err(e)});
 }
 // ---- ward settings ----
 function loadWards(){
+  state.view='set';
   $('savebar').classList.add('hide');$('stat').innerHTML='';
   $('main').innerHTML='<div class="loading">กำลังโหลด...</div>';
-  call('getWards',BOOT.code,BOOT.token).then(function(w){state.wards=w.length?w:[{ward:'',building:'',ready:0,include:'ใช่'}];renderWards()}).catch(err);
+  call('getWards',CUR.code,CUR.token).then(function(w){state.wards=w.length?w:[{ward:'',building:'',ready:0,include:'ใช่'}];renderWards()}).catch(err);
 }
 function renderWards(){
-  var h='<h2>รายชื่อ Ward ประจำของ '+esc(BOOT.name)+'</h2><p class="msg" style="color:var(--muted)">ตั้งครั้งเดียว ใช้เป็นแบบฟอร์มกรอกทุกวัน · NSY, NICU ให้เลือก "ไม่" ในช่องนับรวม</p><div class="wrap"><table class="set"><tr><th>#</th><th class="l">Ward</th><th>อาคาร/โซน</th><th>เตียงพร้อมรับ (ประจำ)</th><th>นับรวมใน Total</th><th></th></tr>';
+  var h='<h2>รายชื่อ Ward ประจำของ '+esc(CUR.name)+'</h2><p class="msg" style="color:var(--muted)">ตั้งครั้งเดียว ใช้เป็นแบบฟอร์มกรอกทุกวัน · NSY, NICU ให้เลือก "ไม่" ในช่องนับรวม</p><div class="wrap"><table class="set"><tr><th>#</th><th class="l">Ward</th><th>อาคาร/โซน</th><th>เตียงพร้อมรับ (ประจำ)</th><th>นับรวมใน Total</th><th></th></tr>';
   state.wards.forEach(function(w,i){h+='<tr><td>'+(i+1)+'</td><td><input data-i="'+i+'" data-k="ward" value="'+esc(w.ward)+'"></td><td><input data-i="'+i+'" data-k="building" value="'+esc(w.building)+'" placeholder="เช่น อาคาร A"></td><td><input type="number" min="0" data-i="'+i+'" data-k="ready" value="'+esc(w.ready)+'"></td><td><select data-i="'+i+'" data-k="include"><option'+(w.include!=='ไม่'?' selected':'')+'>ใช่</option><option'+(w.include==='ไม่'?' selected':'')+'>ไม่</option></select></td><td><button class="btn sec" data-del="'+i+'" style="padding:6px 10px">ลบ</button></td></tr>'});
   h+='</table></div><button class="btn sec" id="add">+ เพิ่ม Ward</button> <button class="btn" id="sw">บันทึกรายชื่อ Ward</button> <span class="msg" id="wmsg"></span>';
   $('main').innerHTML=h;
   [].forEach.call(document.querySelectorAll('.set input,.set select'),function(el){el.onchange=el.oninput=function(){state.wards[+el.getAttribute('data-i')][el.getAttribute('data-k')]=el.value}});
   [].forEach.call(document.querySelectorAll('[data-del]'),function(b){b.onclick=function(){state.wards.splice(+b.getAttribute('data-del'),1);renderWards()}});
   $('add').onclick=function(){state.wards.push({ward:'',building:'',ready:0,include:'ใช่'});renderWards()};
-  $('sw').onclick=function(){$('sw').disabled=true;$('wmsg').textContent='กำลังบันทึก...';call('saveWards',BOOT.code,BOOT.token,state.wards).then(function(w){state.wards=w;renderWards();$('wmsg').innerHTML='<span class="status s-ok">บันทึกแล้ว '+w.length+' Ward</span>'}).catch(err)};
+  $('sw').onclick=function(){$('sw').disabled=true;$('wmsg').textContent='กำลังบันทึก...';call('saveWards',CUR.code,CUR.token,state.wards).then(function(w){state.wards=w;renderWards();$('wmsg').innerHTML='<span class="status s-ok">บันทึกแล้ว '+w.length+' Ward</span>'}).catch(err)};
 }
 
 // ================= ADMIN MODE =================
 function initAdmin(){
   $('title').textContent='%Utilization Functional Beds · ภาพรวม 12 โรงพยาบาล';
   $('sub').textContent='เตียงที่พร้อมให้บริการ ไม่นับรวม NSY, NICU · ข้อมูล ณ 7.00 น.';
+  $('tabs').innerHTML='<button class="on" data-v="ov">ภาพรวม 12 โรง</button><button data-v="entry">กรอกข้อมูล</button><button data-v="rep">รายงาน</button>';
+  $('tabs').onclick=function(e){var v=e.target.getAttribute('data-v');if(!v)return;if(v==='entry')return adminEntry(CUR.code||(state.st&&state.st[0].code));setTab(v);v==='ov'?loadOverview():loadReport()};
   loadOverview();
 }
+function setTab(v){state.av=v;[].forEach.call($('tabs').children,function(b){b.classList.toggle('on',b.getAttribute('data-v')===v)});
+  if(v!=='entry'){$('ctx').classList.add('hide');$('savebar').classList.add('hide')}}
 function loadOverview(){
+  setTab('ov');
   $('main').innerHTML='<div class="loading">กำลังโหลด...</div>';
-  Promise.all([call('getOverview',BOOT.token,$('date').value),call('getTrend',BOOT.token,'',$('date').value,14)]).then(function(res){state.ov=res[0];state.trend=res[1];renderAdmin()}).catch(err);
+  Promise.all([call('getStatus',BOOT.token,$('date').value),call('getOverview',BOOT.token,$('date').value),call('getTrend',BOOT.token,'',$('date').value,14)]).then(function(res){state.st=res[0];state.ov=res[1];state.trend=res[2];renderAdmin()}).catch(err);
 }
+function stBadge(x){return '<span class="status '+(!x.saved?'s-no':x.over?'s-bad':'s-ok')+'">'+esc(x.status)+'</span>'}
 function renderAdmin(){
-  var all=[];state.ov.forEach(function(h){all=all.concat(h.rows)});
-  var t=totals(all);var done=state.ov.filter(function(h){return h.rows.length}).length;
+  var t={usable:0,census:0,remain:0,repair:0,renovate:0};state.st.forEach(function(x){if(!x.saved)return;t.usable+=x.usable;t.census+=x.census;t.remain+=x.remain;t.repair+=x.repair;t.renovate+=x.renovate});
+  var done=state.st.filter(function(x){return x.saved}).length;
   $('stat').innerHTML='<span class="status '+(done===12?'s-ok':'s-no')+'">กรอกแล้ว '+done+'/12 โรง</span>';
   var h='<div class="kpis"><div class="kpi tot"><div class="l">Functional bed รวม '+done+' โรง</div><div class="v">'+t.usable+'</div></div><div class="kpi pts"><div class="l">ครองเตียง ณ 7 น.</div><div class="v">'+t.census+'</div></div><div class="kpi ps2"><div class="l">%Functional Bed</div><div class="v">'+pct(t.census,t.usable)+'</div></div><div class="kpi"><div class="l">เหลือเตียงพร้อมรับ</div><div class="v">'+t.remain+'</div><div class="l">ว่าง '+pct(t.remain,t.usable)+'</div></div><div class="kpi cl"><div class="l">ปิดซ่อม / Renovate</div><div class="v">'+t.repair+' / '+t.renovate+'</div></div></div>';
   h+='<h2>%Functional Bed 14 วันล่าสุด (รวม 12 โรง)</h2>'+trendHtml(state.trend);
-  h+='<h2>สรุปรายโรงพยาบาล วันที่ '+thDate($('date').value)+' <span style="font-weight:400;color:var(--muted);font-size:13px">(กดที่ชื่อโรงเพื่อดูรายละเอียด)</span></h2><div class="wrap"><table><tr><th class="l">โรงพยาบาล</th><th>สถานะ</th><th>Functional bed</th><th>ครองเตียง</th><th>%Func</th><th>เหลือเตียง</th><th>ปิดซ่อม</th><th>Renovate</th></tr>';
-  state.ov.forEach(function(o){var x=totals(o.rows);var r=x.usable>0?x.census/x.usable:0;
-    h+='<tr class="click'+(state.sel===o.code?' sel':'')+'" data-c="'+o.code+'"><td class="l">'+esc(o.name)+'</td><td>'+(o.rows.length?'<span class="status s-ok">กรอกแล้ว</span>':'<span class="status s-no">ยังไม่กรอก</span>')+'</td><td>'+(o.rows.length?x.usable:'-')+'</td><td>'+(o.rows.length?x.census:'-')+'</td><td class="'+(r>1?'red':'')+'">'+(o.rows.length?pct(x.census,x.usable):'-')+'</td><td class="'+(x.remain<0?'red':'')+'">'+(o.rows.length?x.remain:'-')+'</td><td>'+(o.rows.length?x.repair:'-')+'</td><td>'+(o.rows.length?x.renovate:'-')+'</td></tr>'});
+  h+='<h2>สรุปรายโรงพยาบาล วันที่ '+thDate($('date').value)+' <span style="font-weight:400;color:var(--muted);font-size:13px">(กดที่ชื่อโรงเพื่อดูรายละเอียด · ปุ่ม "กรอก/แก้ไข" เพื่อกรอกแทนโรงนั้น)</span></h2><div class="wrap"><table><tr><th class="l">โรงพยาบาล</th><th>สถานะ</th><th>Ward</th><th>Functional bed</th><th>ครองเตียง</th><th>%Func</th><th>เหลือเตียง</th><th>ปิดซ่อม</th><th>Renovate</th><th>เวลาที่กรอก</th><th></th></tr>';
+  state.st.forEach(function(x){var d=x.saved;
+    h+='<tr class="click'+(state.sel===x.code?' sel':'')+'" data-c="'+x.code+'"><td class="l">'+esc(x.name)+'</td><td>'+stBadge(x)+'</td><td>'+x.wards+'/'+x.nWards+'</td><td>'+(d?x.usable:'-')+'</td><td>'+(d?x.census:'-')+'</td><td class="'+(x.rate>1?'red':'')+'">'+(d?pct(x.census,x.usable):'-')+'</td><td class="'+(x.remain<0?'red':'')+'">'+(d?x.remain:'-')+'</td><td>'+(d?x.repair:'-')+'</td><td>'+(d?x.renovate:'-')+'</td><td style="font-size:12px;color:var(--muted)">'+esc(x.at||'-')+'</td><td><button class="mini" data-e="'+x.code+'">'+(d?'แก้ไข':'กรอก')+'</button></td></tr>'});
   h+='</table></div><div id="detail"></div>';
   $('main').innerHTML=h;
+  [].forEach.call(document.querySelectorAll('[data-e]'),function(b){b.onclick=function(ev){ev.stopPropagation();adminEntry(b.getAttribute('data-e'))}});
   [].forEach.call(document.querySelectorAll('tr.click'),function(tr){tr.onclick=function(){state.sel=tr.getAttribute('data-c');renderAdmin();showDetail()}});
   if(state.sel)showDetail();
+}
+// ---- กรอกข้อมูลแทนโรงจากหน้าส่วนกลาง ----
+function adminEntry(code){
+  if(!state.st){return call('getStatus',BOOT.token,$('date').value).then(function(s){state.st=s;adminEntry(code||s[0].code)}).catch(err)}
+  var x=state.st.find(function(h){return h.code===code})||state.st[0];
+  CUR={code:x.code,token:x.token,name:x.name};setTab('entry');
+  var o='';state.st.forEach(function(h){o+='<option value="'+h.code+'"'+(h.code===x.code?' selected':'')+'>'+esc(h.name)+'</option>'});
+  $('ctx').innerHTML='<b>กรอกแทน:</b> <select id="hsel">'+o+'</select><button class="btn" id="vd">กรอกรายวัน</button><button class="btn sec" id="vw">ตั้งค่า Ward ประจำ</button>';
+  $('ctx').classList.remove('hide');
+  $('hsel').onchange=function(){adminEntry($('hsel').value)};
+  $('vd').onclick=function(){$('vd').className='btn';$('vw').className='btn sec';loadDay()};
+  $('vw').onclick=function(){$('vw').className='btn';$('vd').className='btn sec';loadWards()};
+  if(state.view==='set'){$('vw').className='btn';$('vd').className='btn sec';loadWards()}else loadDay();
+  $('save').onclick=saveDay;
+}
+// ---- รายงาน ----
+function loadReport(){
+  setTab('rep');
+  $('main').innerHTML='<div class="loading">กำลังสร้างรายงาน...</div>';
+  call('getReport',BOOT.token,$('date').value).then(function(r){state.rep=r;
+    $('stat').innerHTML='<span class="status '+(r.miss?'s-no':'s-ok')+'">'+(r.miss?'ยังไม่กรอก '+r.miss+' โรง':'กรอกครบ 12 โรง')+'</span>';
+    $('main').innerHTML='<div class="noprint" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"><button class="btn" id="rmail">ส่งอีเมลรายงาน</button><button class="btn sec" id="rcopy">คัดลอกข้อความ (ส่ง LINE)</button><button class="btn sec" id="rprint">พิมพ์ / บันทึก PDF</button><span class="msg" id="rmsg"></span></div>'+
+      '<h2 class="noprint">หัวเรื่องอีเมล</h2><div class="txt noprint">'+esc(r.subject)+'</div><h2>รายงาน</h2><div class="rep">'+r.html+'</div><h2 class="noprint">ข้อความสั้น (สำหรับ LINE)</h2><div class="txt noprint">'+esc(r.text)+'</div>'+
+      '<p class="msg noprint" style="color:var(--muted)">ระบบส่งรายงานนี้เข้าอีเมลอัตโนมัติทุกวันเวลาประมาณ 10:00 น.</p>';
+    $('rprint').onclick=function(){window.print()};
+    $('rcopy').onclick=function(){navigator.clipboard.writeText(r.text).then(function(){$('rmsg').innerHTML='<span class="status s-ok">คัดลอกแล้ว</span>'})};
+    $('rmail').onclick=function(){$('rmail').disabled=true;$('rmsg').textContent='กำลังส่ง...';call('sendReport',BOOT.token,$('date').value).then(function(x){$('rmail').disabled=false;$('rmsg').innerHTML='<span class="status s-ok">ส่งแล้วถึง '+esc(x.to)+'</span>'}).catch(function(e){$('rmail').disabled=false;$('rmsg').innerHTML='<span class="status s-bad">'+esc(e.message||e)+'</span>'})};
+  }).catch(err);
 }
 function trendHtml(tr){var h='<div class="trend">';tr.forEach(function(d){var v=d.rate==null?0:Math.min(d.rate,1.5);h+='<div class="c"><div class="t">'+(d.rate==null?'':(d.rate*100).toFixed(1)+'%')+'</div><div class="b" style="height:'+(v/1.5*100)+'%;'+(d.rate>1?'background:var(--red)':'')+'"></div><div class="d">'+thDate(d.date).replace(/ \d{4}$/,'')+'</div></div>'});return h+'</div>'}
 function showDetail(){
