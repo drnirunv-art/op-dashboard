@@ -124,8 +124,10 @@ function render(){
       <p class="lead">ทุกวัน 16:00 ถ้าโรงไหนช่างยังไม่ได้บันทึกการตรวจ ระบบจะส่งอีเมลเตือนถึงอีเมลกลุ่มและลูกทีมของโรงนั้น และส่งสรุปรวมให้อีเมลในช่องที่ 1</p>
       <section class="card">
         <h2>1 · อีเมลรับสรุปรวมทั้ง 12 โรง</h2>
-        <div class="members" id="summaryTo">${summaryList().map((m, i) => `<div class="m"><span>${i + 1}</span><input type="email" inputmode="email" autocomplete="off" placeholder="${i ? "name@example.com" : "dr.nirun.v@gmail.com"}" value="${esc(m)}"></div>`).join("")}</div>
-        <p class="hint">ช่องละ 1 อีเมล · ทุกอีเมลที่กรอกจะได้รับสรุปรวมทุกวัน · ปล่อยช่องว่างไว้ได้</p>
+        <label class="f">ไม่จำกัดจำนวน · กด + เพิ่มช่อง · กด ✕ ลบ · ช่องละ 1 อีเมล</label>
+        <div class="members" id="summaryTo" data-members="__summary">${summaryList().map((m, i) => memberRow(m, i)).join("")}</div>
+        <button class="btn add" data-add="__summary" type="button">+ เพิ่มช่องอีเมล</button>
+        <p class="hint">ทุกอีเมลที่กรอกจะได้รับสรุปรวมทุกวัน · ปล่อยช่องว่างไว้ได้</p>
       </section>
       ${DATA.hospitals.map(h => hospitalCard(h, true)).join("")}`;
   } else {
