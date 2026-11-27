@@ -97,6 +97,15 @@ function membersHtml(h){
 }
 const memberRow = (m, i) => `<div class="m"><span>${i + 1}</span><input type="email" inputmode="email" autocomplete="off" placeholder="name@example.com" value="${esc(m)}"><button class="x plus" type="button" title="เพิ่มอีเมลถัดจากช่องนี้" aria-label="เพิ่มอีเมลถัดจากช่องนี้">+</button><button class="x" type="button" title="ลบ" aria-label="ลบอีเมลนี้">✕</button></div>`;
 
+// admin summary recipients: existing list + 5 extra boxes (stored as a comma list)
+const SUMMARY_EXTRA = 5;
+function summaryList(){
+  const list = String(DATA.summaryTo || "").split(/[\s,;]+/).filter(Boolean);
+  const n = Math.max(1, list.length) + SUMMARY_EXTRA;
+  while (list.length < n) list.push("");
+  return list;
+}
+
 function hospitalCard(h, admin){
   return `<section class="card" data-key="${esc(h.key)}">
     <h2>${esc(h.name)}</h2>
@@ -115,8 +124,8 @@ function render(){
       <p class="lead">ทุกวัน 16:00 ถ้าโรงไหนช่างยังไม่ได้บันทึกการตรวจ ระบบจะส่งอีเมลเตือนถึงอีเมลกลุ่มและลูกทีมของโรงนั้น และส่งสรุปรวมให้อีเมลในช่องที่ 1</p>
       <section class="card">
         <h2>1 · อีเมลรับสรุปรวมทั้ง 12 โรง</h2>
-        <input type="text" id="summaryTo" inputmode="email" autocomplete="off" value="${esc(DATA.summaryTo)}" placeholder="dr.nirun.v@gmail.com">
-        <p class="hint">ใส่ได้หลายอีเมล คั่นด้วยเครื่องหมาย ,</p>
+        <div class="members" id="summaryTo">${summaryList().map((m, i) => `<div class="m"><span>${i + 1}</span><input type="email" inputmode="email" autocomplete="off" placeholder="${i ? "name@example.com" : "dr.nirun.v@gmail.com"}" value="${esc(m)}"></div>`).join("")}</div>
+        <p class="hint">ช่องละ 1 อีเมล · ทุกอีเมลที่กรอกจะได้รับสรุปรวมทุกวัน · ปล่อยช่องว่างไว้ได้</p>
       </section>
       ${DATA.hospitals.map(h => hospitalCard(h, true)).join("")}`;
   } else {
@@ -174,8 +183,11 @@ function collect(){
   }));
   if (bad) throw new Error(`มีอีเมลที่รูปแบบไม่ถูกต้อง ${bad} ช่อง (กรอบสีแดง)`);
   if (DATA.role !== "admin") return { members: hospitals[0].members };
-  const summaryTo = $("summaryTo").value.trim();
-  summaryTo.split(/[\s,;]+/).filter(Boolean).forEach(x => { if (!EMAIL_RE.test(x)){ $("summaryTo").classList.add("err"); throw new Error("อีเมลรับสรุปรวมไม่ถูกต้อง: " + x); } });
+  let badSum = 0;
+  const summaryTo = [...$("summaryTo").querySelectorAll("input")].map(el => {
+    const v = el.value.trim(); if (v && !EMAIL_RE.test(v)){ el.classList.add("err"); badSum++; } return v;
+  }).filter(Boolean).join(", ");
+  if (badSum) throw new Error(`อีเมลรับสรุปรวมรูปแบบไม่ถูกต้อง ${badSum} ช่อง (กรอบสีแดง)`);
   return { summaryTo, hospitals };
 }
 $("save").onclick = async () => {
