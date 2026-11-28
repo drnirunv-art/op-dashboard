@@ -92,6 +92,7 @@ table.pva tbody tr.pv-top td{border-top:6px solid transparent}
     </div>
     <div class="ctrl">
       <a href="sheets.html" style="font-weight:600">กรอกข้อมูล (Google Sheet)</a>
+      <a id="emailLink" href="email.html" style="font-weight:600" hidden>ตั้งค่าอีเมลรับแจ้งเตือน</a>
       <select id="hosp" aria-label="เลือกโรงพยาบาล"></select>
     </div>
   </header>
@@ -104,6 +105,7 @@ const MONTHS = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","�
 const qs = new URLSearchParams(location.search);
 const CODE = (qs.get("p") || "").toUpperCase();
 const TOKEN = new URLSearchParams(location.hash.slice(1)).get("t") || "";
+if (TOKEN) { const a = document.getElementById("emailLink"); a.href = "email.html#t=" + encodeURIComponent(TOKEN); a.hidden = false; }
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const thd = s => { if (!s) return "-"; const [y,m,d] = s.split("-"); return `${+d}/${+m}/${+y+543}`; };
