@@ -93,6 +93,7 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const EMAIL_RE = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
 const KINDS = [["renew","เตือนต่อสัญญา (จันทร์)"],["week","สรุปศุกร์"],["month","สรุปวันที่ 23"]];
+const EXEC_EXTRA = 5, HOSP_MIN = 5;
 let DATA = null, dirty = false;
 
 async function apiGet(){
@@ -121,11 +122,14 @@ function rowHtml(r, i){
 }
 const headHtml = `<div class="r hd"><span>#</span><span>ชื่อ-สกุล</span><span>ตำแหน่ง</span><span>อีเมล</span><span>ส่งแบบ</span><span class="span4">ได้รับอีเมลเรื่อง (เอาเครื่องหมายออก = ไม่รับ) · ใช้งาน</span></div>`;
 function listCard(l){
-  const rows = l.rows.length ? l.rows : [blank()];
+  // like alerts.html: executives get their current list + 5 empty slots, each hospital starts with at least 5 slots; + adds more
+  const rows = l.rows.slice();
+  const want = l.key === "EXEC" ? l.rows.length + EXEC_EXTRA : Math.max(HOSP_MIN, l.rows.length);
+  while (rows.length < want) rows.push(blank());
   const n = l.rows.filter(r => r.email && r.on).length;
   return `<section class="card" data-key="${esc(l.key)}">
     <h2>${esc(l.name)}</h2>
-    <p class="sum">ใช้งานอยู่ ${n} อีเมล · To = ผู้รับหลัก · CC = รับสำเนา · เอาเครื่องหมายออกถ้าไม่ต้องการรับเรื่องนั้น · ปิด "ใช้งาน" เพื่อหยุดส่งชั่วคราว</p>
+    <p class="sum">ใช้งานอยู่ ${n} อีเมล · To = ผู้รับหลัก · CC = รับสำเนา · เอาเครื่องหมายออกถ้าไม่ต้องการรับเรื่องนั้น · ปิด "ใช้งาน" เพื่อหยุดส่งชั่วคราว · ช่องว่างปล่อยไว้ได้ · กด + เพิ่มอีเมล ถ้าไม่พอ</p>
     <div class="rows">${headHtml}${rows.map(rowHtml).join("")}</div>
     <button class="btn add" data-add="${esc(l.key)}" type="button">+ เพิ่มอีเมล</button>
   </section>`;
