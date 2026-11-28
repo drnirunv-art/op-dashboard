@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>อีเมล PM MA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --bg:#f3f6f7; --panel:#ffffff; --fg:#14262c; --muted:#5b6f76; --line:#d6e0e3;
+  --accent:#0f7c9c; --accent-ink:#ffffff; --head:#ffe600; --head-ink:#1d1d00;
+  --ok:#2e7d32; --bad:#c62828; --field:#fffbe0;
+  --shadow:0 10px 30px rgba(20,38,44,.10);
+  --f-body:"IBM Plex Sans Thai",system-ui,"Leelawadee UI",Tahoma,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0e1719; --panel:#162326; --fg:#e4eef0; --muted:#94a9af; --line:#2a3b3f;
+  --accent:#3fb3d3; --accent-ink:#04212a; --head:#d9c400; --ok:#7bd17f; --bad:#ff8a80; --field:#1f2d30;
+  --shadow:0 10px 30px rgba(0,0,0,.4); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1719; --panel:#162326; --fg:#e4eef0; --muted:#94a9af; --line:#2a3b3f;
+  --accent:#3fb3d3; --accent-ink:#04212a; --head:#d9c400; --ok:#7bd17f; --bad:#ff8a80; --field:#1f2d30;
+  --shadow:0 10px 30px rgba(0,0,0,.4); color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.5}
+button,input{font:inherit;color:inherit}
+.wrap{max-width:980px;margin:0 auto;padding:16px 16px 110px}
+h1{margin:0 0 4px;font-size:clamp(1.25rem,3vw,1.6rem)}
+.lead{margin:0 0 16px;color:var(--muted)}
+.badge{display:inline-block;font-size:12px;font-weight:600;border-radius:999px;padding:2px 10px;background:var(--head);color:var(--head-ink);vertical-align:middle;margin-left:6px}
+.card{background:var(--panel);border-radius:12px;box-shadow:var(--shadow);padding:16px;margin-bottom:14px}
+.card h2{margin:0 0 10px;font-size:1.05rem}
+label.f{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:10px 0 4px}
+input[type=email],input[type=text]{width:100%;border:1px solid var(--line);background:var(--field);border-radius:9px;padding:9px 11px}
+input:read-only{background:transparent;border-style:dashed;color:var(--muted)}
+input.err{border-color:var(--bad);outline:2px solid color-mix(in srgb,var(--bad) 30%,transparent)}
+.x{border:1px solid var(--line);background:var(--panel);border-radius:8px;width:34px;height:38px;cursor:pointer;flex:none}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:8px 14px;font-weight:600;cursor:pointer}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn:disabled{opacity:.6;cursor:progress}
+.add{margin-top:8px}
+.hint{color:var(--muted);font-size:13px;margin:6px 0 0}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding:10px 16px;display:flex;gap:12px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+.bar .msg{margin-right:auto;font-size:14px}
+.msg.ok{color:var(--ok)} .msg.bad{color:var(--bad)}
+.state{padding:40px 8px;text-align:center;color:var(--muted)}
+details summary{cursor:pointer;font-weight:600}
+.wrap{max-width:1180px}
+.top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline}
+.top a{color:var(--accent);font-weight:600}
+.rows{display:flex;flex-direction:column;gap:8px}
+.r{display:grid;grid-template-columns:26px 1.1fr 1.1fr 1.6fr 74px 158px 92px 110px 74px 34px;gap:6px;align-items:center;border-bottom:1px dashed var(--line);padding-bottom:8px}
+.r.off input[type=email]{text-decoration:line-through;color:var(--muted)}
+.r .n{color:var(--muted);font-size:13px;text-align:right}
+.r select{font:inherit;color:inherit;border:1px solid var(--line);background:var(--field);border-radius:9px;padding:8px 6px}
+.ck{display:flex;gap:4px;align-items:center;font-size:13px;white-space:nowrap}
+.ck input{width:18px;height:18px;accent-color:var(--accent)}
+.hd{font-size:12px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--line)}
+.hd span:nth-child(1){visibility:hidden}
+.hd .span4{grid-column:6/span 4}
+@media (max-width:860px){
+  .hd{display:none}
+  .r{grid-template-columns:1fr 1fr;padding:10px 0}
+  .r .n{grid-column:1/-1;text-align:left;font-weight:600;color:var(--fg)}
+  .r .em{grid-column:1/-1}
+  .r .x{justify-self:end}
+}
+.sum{font-size:13px;color:var(--muted);margin:0 0 8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="app"><p class="state">กำลังโหลด…</p></div>
+</div>
+<div class="bar" id="bar" hidden>
+  <span class="msg" id="msg"></span>
+  <button class="btn primary" id="save">บันทึก</button>
+</div>
+
+<script>
+// LINE's in-app browser misbehaves with forms, so ask LINE to reopen the page in Chrome/Safari (once)
+if (/ Line\//i.test(navigator.userAgent) && !new URLSearchParams(location.search).has("openExternalBrowser")) {
+  const u = new URL(location.href), key = new URLSearchParams(u.hash.slice(1)).get("t");
+  if (key){ u.searchParams.set("t", key); u.hash = ""; }
+  u.searchParams.set("openExternalBrowser", "1"); location.replace(u.toString());
+}
+const API_URL = "https://script.google.com/macros/s/AKfycbx7jz8ALeHKrW5aXwYUWIjVwdh-eCfDVFIAzv302fOQBp5ttPdTuj0PbW8zjjnpuS17Jw/exec";
+// the access key travels in the #hash so it never reaches GitHub's server logs
+const TOKEN = new URLSearchParams(location.hash.slice(1)).get("t") || new URLSearchParams(location.search).get("t") || "";
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const EMAIL_RE = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
+const KINDS = [["renew","เตือนต่อสัญญา (จันทร์)"],["week","สรุปศุกร์"],["month","สรุปวันที่ 23"]];
+let DATA = null, dirty = false;
+
+async function apiGet(){
+  const r = await fetch(API_URL + "?" + new URLSearchParams({ api: "emailGet", t: TOKEN }), { credentials: "omit" });
+  const d = await r.json(); if (d.error) throw new Error(d.error); return d;
+}
+async function apiSave(data){
+  const r = await fetch(API_URL, { method: "POST", credentials: "omit", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ fn: "emailSave", t: TOKEN, data }) });
+  const d = await r.json(); if (d.error) throw new Error(d.error); return d;
+}
+function setMsg(text, kind){ $("msg").textContent = text; $("msg").className = "msg " + (kind || ""); }
+const touch = () => { dirty = true; setMsg("ยังไม่ได้บันทึก"); };
+
+const blank = () => ({ name: "", role: "", email: "", mode: "CC", renew: true, week: true, month: true, on: true, note: "" });
+function rowHtml(r, i){
+  return `<div class="r${r.on ? "" : " off"}" data-note="${esc(r.note)}">
+    <span class="n">${i + 1}</span>
+    <input type="text" class="nm" placeholder="ชื่อ-สกุล" value="${esc(r.name)}" aria-label="ชื่อ-สกุล">
+    <input type="text" class="rl" placeholder="ตำแหน่ง / หน้าที่" value="${esc(r.role)}" aria-label="ตำแหน่ง">
+    <input type="email" class="em" inputmode="email" autocomplete="off" placeholder="name@example.com" value="${esc(r.email)}" aria-label="อีเมล">
+    <select class="md" aria-label="ส่งแบบ"><option${r.mode === "To" ? " selected" : ""}>To</option><option${r.mode === "CC" ? " selected" : ""}>CC</option></select>
+    ${KINDS.map(([k, l]) => `<label class="ck"><input type="checkbox" class="k-${k}"${r[k] ? " checked" : ""}>${l}</label>`).join("")}
+    <label class="ck"><input type="checkbox" class="on"${r.on ? " checked" : ""}>ใช้งาน</label>
+    <button class="x" type="button" title="ลบ" aria-label="ลบแถวนี้">✕</button>
+  </div>`;
+}
+const headHtml = `<div class="r hd"><span>#</span><span>ชื่อ-สกุล</span><span>ตำแหน่ง</span><span>อีเมล</span><span>ส่งแบบ</span><span class="span4">ได้รับอีเมลเรื่อง (เอาเครื่องหมายออก = ไม่รับ) · ใช้งาน</span></div>`;
+function listCard(l){
+  const rows = l.rows.length ? l.rows : [blank()];
+  const n = l.rows.filter(r => r.email && r.on).length;
+  return `<section class="card" data-key="${esc(l.key)}">
+    <h2>${esc(l.name)}</h2>
+    <p class="sum">ใช้งานอยู่ ${n} อีเมล · To = ผู้รับหลัก · CC = รับสำเนา · เอาเครื่องหมายออกถ้าไม่ต้องการรับเรื่องนั้น · ปิด "ใช้งาน" เพื่อหยุดส่งชั่วคราว</p>
+    <div class="rows">${headHtml}${rows.map(rowHtml).join("")}</div>
+    <button class="btn add" data-add="${esc(l.key)}" type="button">+ เพิ่มอีเมล</button>
+  </section>`;
+}
+function render(){
+  const admin = DATA.role === "admin";
+  document.title = admin ? "อีเมล PM MA · ผู้ดูแลระบบ" : "อีเมล PM MA · " + DATA.lists[0].name;
+  $("app").innerHTML = `
+    <div class="top">
+      <h1>อีเมลรับแจ้งเตือน PM MA ${admin ? `<span class="badge">ผู้ดูแลระบบ</span>` : ""}</h1>
+      <a href="./${admin ? "" : "?p=" + DATA.lists[0].key.toLowerCase()}">← กลับหน้าแดชบอร์ด PM MA</a>
+    </div>
+    <p class="lead">${admin
+      ? "ผู้บริหารได้รับสรุปภาพรวม 12 โรง แต่ละโรงได้รับเฉพาะข้อมูลโรงตัวเอง ระบบอ่านรายชื่อนี้ใหม่ทุกครั้งก่อนส่ง"
+      : "ใส่อีเมลของทีมที่ต้องรับอีเมลของโรงนี้ แล้วกด <b>บันทึก</b> ถ้ามีคนลาออก กด ✕ เพื่อลบ"}
+      รอบส่ง: เตือนต่อสัญญาทุกวันจันทร์ 08:00 · สรุปผลทุกวันศุกร์ · สรุปรายเดือนวันที่ 23</p>
+    ${DATA.lists.map(listCard).join("")}`;
+  $("bar").hidden = false;
+  dirty = false; setMsg("");
+}
+const renumber = box => [...box.querySelectorAll(".r:not(.hd) .n")].forEach((s, i) => s.textContent = i + 1);
+
+document.addEventListener("click", e => {
+  const add = e.target.closest("[data-add]");
+  if (add){
+    const box = add.previousElementSibling;
+    box.insertAdjacentHTML("beforeend", rowHtml(blank(), 0)); renumber(box);
+    box.lastElementChild.querySelector(".em").focus(); touch(); return;
+  }
+  const x = e.target.closest(".x");
+  if (x){ const box = x.closest(".rows"); x.closest(".r").remove(); renumber(box); touch(); }
+});
+document.addEventListener("input", e => { e.target.classList.remove("err"); touch(); });
+document.addEventListener("change", e => { if (e.target.matches(".on")) e.target.closest(".r").classList.toggle("off", !e.target.checked); touch(); });
+window.addEventListener("beforeunload", e => { if (dirty){ e.preventDefault(); e.returnValue = ""; } });
+
+function collect(){
+  let bad = 0;
+  const lists = [...document.querySelectorAll("section[data-key]")].map(sec => ({
+    key: sec.dataset.key,
+    rows: [...sec.querySelectorAll(".r:not(.hd)")].map(r => {
+      const q = c => r.querySelector(c), em = q(".em"), v = em.value.trim();
+      if (v && !EMAIL_RE.test(v)){ em.classList.add("err"); bad++; }
+      const o = { name: q(".nm").value.trim(), role: q(".rl").value.trim(), email: v, mode: q(".md").value, on: q(".on").checked, note: r.dataset.note || "" };
+      KINDS.forEach(([k]) => o[k] = q(".k-" + k).checked);
+      return o;
+    }).filter(o => o.email || o.name)
+  }));
+  if (bad) throw new Error(`มีอีเมลที่รูปแบบไม่ถูกต้อง ${bad} ช่อง (กรอบสีแดง)`);
+  return { lists };
+}
+$("save").onclick = async () => {
+  let data;
+  try { data = collect(); } catch (e){ setMsg(e.message, "bad"); return; }
+  const btn = $("save"); btn.disabled = true; btn.textContent = "กำลังบันทึก…"; setMsg("");
+  try {
+    DATA = await apiSave(data); render();
+    setMsg("บันทึกแล้ว " + new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }), "ok");
+  } catch (e){ setMsg("บันทึกไม่สำเร็จ: " + e.message, "bad"); }
+  finally { btn.disabled = false; btn.textContent = "บันทึก"; }
+};
+
+(async () => {
+  if (!TOKEN){ $("app").innerHTML = `<p class="state">ลิงก์ไม่ครบ กรุณาเปิดจากลิงก์ที่ได้รับ</p>`; return; }
+  try { DATA = await apiGet(); render(); }
+  catch (e){ $("app").innerHTML = `<p class="state">${esc(e.message)}</p>`; }
+})();
+</script>
+</body>
+</html>
